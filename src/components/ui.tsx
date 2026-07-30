@@ -28,7 +28,7 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
     xl: 'w-24 h-24 text-3xl',
   };
   return (
-    <div className={`${sizeMap[size]} ${color} rounded-full flex items-center justify-center text-white font-medium shrink-0 shadow-sm`}>
+    <div className={`${sizeMap[size]} ${color} rounded-full flex items-center justify-center text-white font-semibold shrink-0 shadow-sm`}>
       {initials}
     </div>
   );
