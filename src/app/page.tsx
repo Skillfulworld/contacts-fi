@@ -1,41 +1,25 @@
-"use client";
-import { useEffect, useState } from 'react';
-import { DynamicWidget } from '@dynamic-labs/sdk-react-core';
+import { MOCK_CONTACTS } from '@/lib/mockData';
+import { Avatar, FloatingActionButton } from '@/components/ui';
+import Link from 'next/link';
 
-export default function Page() {
-  const [agents, setAgents] = useState([]);
-  const [rules, setRules] = useState([]);
-
-  useEffect(() => {
-    fetch('/api/rpc', { method: 'POST', body: JSON.stringify({ table_name: 'agents' }) })
-      .then(res => res.json())
-      .then(setAgents);
-    fetch('/api/rpc', { method: 'POST', body: JSON.stringify({ table_name: 'settlement_rules' }) })
-      .then(res => res.json())
-      .then(setRules);
-  }, []);
-
+export default function ContactsPage() {
+  const sorted = [...MOCK_CONTACTS].sort((a, b) => a.name.localeCompare(b.name));
+  
   return (
-    <div>
-      <DynamicWidget />
+    <div className="p-4">
+      <input type="text" placeholder="Search contacts" className="w-full p-4 mb-4 bg-surface-variant rounded-full" />
       
-      <h2>Agents</h2>
-      <table>
-        <thead><tr><th>ID</th><th>Wallet</th><th>Status</th></tr></thead>
-        <tbody>
-          {agents.map((a: any) => <tr key={a.id}><td>{a.id}</td><td>{a.wallet_address}</td><td>{a.status}</td></tr>)}
-        </tbody>
-      </table>
+      {sorted.map(c => (
+        <Link key={c.id} href={`/contacts/${c.id}`} className="flex items-center gap-4 p-3 hover:bg-surface-variant rounded-2xl">
+          <Avatar name={c.name} color={c.color} />
+          <div>
+            <div className="font-medium text-lg">{c.name}</div>
+            <div className="text-sm text-gray-500">{c.provider}</div>
+          </div>
+        </Link>
+      ))}
 
-      <h2>Settlement Rules</h2>
-      <table>
-        <thead><tr><th>ID</th><th>Agent ID</th><th>Signal</th><th>Threshold</th><th>Amount</th><th>Status</th></tr></thead>
-        <tbody>
-          {rules.map((r: any) => <tr key={r.id}><td>{r.id}</td><td>{r.agent_id}</td><td>{r.trigger_signal}</td><td>{r.threshold}</td><td>{r.settlement_amount}</td><td>{r.status}</td></tr>)}
-        </tbody>
-      </table>
-      
-      <button className="settlex-action-button">Action</button>
+      <FloatingActionButton href="/contacts/add" />
     </div>
   );
 }
