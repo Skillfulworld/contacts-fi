@@ -2,45 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #f8f9fa;
-  --foreground: #202124;
+@layer base {
+  :root {
+    --md-sys-color-primary: #6750a4;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #eaddff;
+    --md-sys-color-on-primary-container: #21005d;
+    --md-sys-color-secondary: #625b71;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #e8def8;
+    --md-sys-color-on-secondary-container: #1d192b;
+    --md-sys-color-tertiary: #7d5260;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: #ffd8e4;
+    --md-sys-color-on-tertiary-container: #31111d;
+    --md-sys-color-error: #b3261e;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #f9dedc;
+    --md-sys-color-on-error-container: #410e0b;
+    --md-sys-color-outline: #79747e;
+    --md-sys-color-background: #fef7ff;
+    --md-sys-color-on-background: #1d1b20;
+    --md-sys-color-surface: #fef7ff;
+    --md-sys-color-on-surface: #1d1b20;
+    --md-sys-color-surface-variant: #e7e0ec;
+    --md-sys-color-on-surface-variant: #49454f;
+    --md-sys-color-inverse-surface: #322f35;
+    --md-sys-color-inverse-on-surface: #f5eff7;
+  }
+
+  body {
+    background-color: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-background);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
-html,
-body {
-  width: 100%;
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif;
-}
+@layer components {
+  .md-card {
+    @apply bg-white rounded-[28px] p-4 shadow-sm border border-transparent transition-all active:shadow-none active:scale-[0.98];
+  }
+  
+  .md-button-primary {
+    @apply bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-6 py-3 rounded-full font-medium shadow-sm active:shadow-none active:scale-95 transition-all flex items-center justify-center gap-2;
+  }
 
-* {
-  box-sizing: border-box;
-}
+  .md-button-tonal {
+    @apply bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] px-6 py-3 rounded-full font-medium active:scale-95 transition-all flex items-center justify-center gap-2;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  .md-input {
+    @apply bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)] px-4 py-3 rounded-xl border-b-2 border-transparent focus:border-[var(--md-sys-color-primary)] outline-none transition-all;
+  }
 
-button {
-  font: inherit;
-}
-
-input,
-textarea,
-select {
-  font: inherit;
+  .md-fab {
+    @apply fixed bottom-24 right-6 w-14 h-14 bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] rounded-2xl shadow-lg flex items-center justify-center text-2xl active:shadow-md active:scale-90 transition-all;
+  }
 }
