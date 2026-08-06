@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { useContacts } from '@/context/ContactContext';
-import { Avatar, SearchBar, FAB, WalletConnectButton } from '@/components/ui';
+import { Avatar, SearchBar, FAB } from '@/components/ui';
 import Link from 'next/link';
 import { Contact2, SearchX } from 'lucide-react';
 
@@ -31,7 +31,6 @@ export default function ContactsListPage() {
             </div>
             <h1 className="text-2xl font-semibold text-[var(--md-sys-color-on-background)]">The Contacts app for crypto</h1>
           </div>
-          <WalletConnectButton />
         </div>
 
         <SearchBar value={searchTerm} onChange={setSearchTerm} />

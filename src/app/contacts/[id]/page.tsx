@@ -3,13 +3,15 @@ import { useState } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useContacts } from '@/context/ContactContext';
 import { Avatar, Button, Card, WalletCard, TransactionCard, HealthBadge, SectionHeader } from '@/components/ui';
+import { SendFlow } from '@/components/SendFlow';
 import Link from 'next/link';
-import { ChevronLeft, Pencil, Trash2, ShieldCheck, Plus } from 'lucide-react';
+import { ChevronLeft, Pencil, Trash2, ShieldCheck, Send } from 'lucide-react';
 
 export default function ContactDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { contacts, deleteContact } = useContacts();
+  const { contacts, deleteContact, addTransaction } = useContacts();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSendFlow, setShowSendFlow] = useState(false);
   const contact = contacts.find((c: any) => c.id === params.id);
 
   if (!contact) notFound();
@@ -36,6 +38,10 @@ export default function ContactDetailsPage({ params }: { params: { id: string } 
       </div>
 
       <div className="mt-8 flex justify-center gap-6 px-4">
+        <button onClick={() => setShowSendFlow(true)} className="flex flex-col items-center gap-2 group">
+          <div className="rounded-2xl bg-[#EDEBFF] p-4 text-[#6D5DF6] transition-colors group-hover:bg-[#DDD7FF]"><Send className="h-4 w-4" /></div>
+          <span className="text-xs font-semibold text-[#6B7280] group-hover:text-[#6D5DF6]">Send</span>
+        </button>
         <Link href={`/contacts/${contact.id}/edit`} className="flex flex-col items-center gap-2 group">
           <Button variant="tonal" className="!p-4 rounded-2xl"><Pencil className="h-4 w-4" /></Button>
           <span className="text-xs font-semibold text-[#6B7280] group-hover:text-[#6D5DF6]">Edit</span>
@@ -57,6 +63,24 @@ export default function ContactDetailsPage({ params }: { params: { id: string } 
             </div>
           </div>
         </div>
+      )}
+
+      {showSendFlow && (
+        <SendFlow
+          recipient={{ name: contact.name, wallets: contact.wallets }}
+          onClose={() => setShowSendFlow(false)}
+          onTransactionComplete={(tx) => {
+            addTransaction({
+              ...tx,
+              contactId: contact.id,
+              type: 'sent',
+              contact: contact.name,
+              date: 'Just now',
+              wallet: contact.defaultProvider,
+            });
+            setShowSendFlow(false);
+          }}
+        />
       )}
 
       <div className="mt-8 space-y-8 px-4">

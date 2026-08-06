@@ -1,13 +1,14 @@
 "use client";
 import { useState } from 'react';
-import { ALL_TRANSACTIONS } from '@/lib/mockData';
+import { useContacts } from '@/context/ContactContext';
 import { TransactionCard } from '@/components/ui';
 import { Search, ReceiptText, FileDown } from 'lucide-react';
 
 export default function TransactionsHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const { transactions } = useContacts();
 
-  const filteredTx = ALL_TRANSACTIONS.filter((t) =>
+  const filteredTx = transactions.filter((t: any) =>
     t.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.wallet.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -44,7 +45,7 @@ export default function TransactionsHistoryPage() {
 
       <div className="overflow-hidden rounded-[28px] border border-[#E5E7EB] bg-white shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
         {filteredTx.length > 0 ? (
-          filteredTx.map((tx) => <TransactionCard key={tx.id} tx={tx} />)
+          filteredTx.map((tx: any) => <TransactionCard key={tx.id} tx={tx} />)
         ) : (
           <div className="p-16 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#EDEBFF] text-[#6D5DF6] mx-auto">

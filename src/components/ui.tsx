@@ -24,7 +24,7 @@ import {
   Contact2,
   ArrowLeftRight,
 } from 'lucide-react';
-import { useWallet } from '@/context/WalletContext';
+import { getChainDisplayName, useWallet } from '@/context/WalletContext';
 
 // --- Avatar ---
 export const Avatar = ({ initials, color, size = 'md' }: { initials: string; color?: string; size?: 'sm' | 'md' | 'lg' | 'xl' }) => {
@@ -49,10 +49,11 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
   );
 };
 
-// --- WalletConnectButton ---
-export const WalletConnectButton = () => {
-  const { isConnected, isConnecting, walletAddress, walletName, connectWallet, disconnectWallet } = useWallet();
+// --- WalletHeader ---
+export const WalletHeader = () => {
+  const { isConnected, isConnecting, walletAddress, walletName, chainId, connectWallet, disconnectWallet, switchToArcTestnet } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -76,9 +77,21 @@ export const WalletConnectButton = () => {
     }
   };
 
+  const handleSwitchNetwork = async () => {
+    setSwitchError(null);
+    const result = await switchToArcTestnet();
+    if (!result.ok) {
+      setSwitchError(result.error || 'Unable to switch network.');
+    } else {
+      setMenuOpen(false);
+    }
+  };
+
+  const isArcTestnet = chainId?.trim().toLowerCase() === '0x4cef52' || chainId === '5042002';
+
   if (isConnected) {
     return (
-      <div ref={buttonRef} className="relative">
+      <div ref={buttonRef} className="relative z-50">
         <button
           onClick={() => setMenuOpen((prev) => !prev)}
           className="flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-[#F3F4F6] px-3 py-2 shadow-[0_8px_24px_rgba(17,24,39,0.06)]"
@@ -93,15 +106,35 @@ export const WalletConnectButton = () => {
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 top-12 z-20 w-44 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2 shadow-[0_14px_36px_rgba(17,24,39,0.12)]">
+          <div className="absolute right-0 top-14 z-50 w-56 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2 shadow-[0_14px_36px_rgba(17,24,39,0.12)]">
+            <div className="mb-2 px-2 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
+              {isArcTestnet ? '🟣 Arc Testnet' : '🔴 Wrong Network'}
+            </div>
+            <div className="mb-2 px-2 text-sm font-medium text-[#1C1C1E]">
+              {isArcTestnet ? 'Connected' : `Current Chain: ${getChainDisplayName(chainId)}`}
+            </div>
+            <div className="mb-2 break-all px-2 text-xs text-[#6B7280]">
+              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connected'}
+            </div>
             <button onClick={handleCopy} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#1C1C1E] hover:bg-[#F3F4F6]">
               <Copy className="h-4 w-4" />
               Copy Address
             </button>
+            {!isArcTestnet && (
+              <button onClick={handleSwitchNetwork} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#6D5DF6] hover:bg-[#EDEBFF]">
+                <Wallet className="h-4 w-4" />
+                Switch to Arc Testnet
+              </button>
+            )}
             <button onClick={() => { disconnectWallet(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#D64545] hover:bg-[#FDECEC]">
               <Wallet className="h-4 w-4" />
               Disconnect
             </button>
+            {switchError && (
+              <div className="mt-2 rounded-xl border border-[#F9D7D7] bg-[#FDECEC] px-3 py-2 text-xs text-[#6B1F1F]">
+                {switchError}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -246,8 +279,9 @@ export const BottomNavigation = () => {
   const pathname = usePathname();
   const links = [
     { href: '/', label: 'Contacts', icon: User },
+    { href: '/send', label: 'Send', icon: ArrowUpRight },
     { href: '/swap', label: 'Swap', icon: ArrowLeftRight },
-    { href: '/transactions', label: 'Transactions', icon: ReceiptText },
+    { href: '/transactions', label: 'Activity', icon: ReceiptText },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 

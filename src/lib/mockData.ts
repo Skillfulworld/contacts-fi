@@ -7,7 +7,13 @@ export const MOCK_CONTACTS = [
     initials: 'AJ',
     notes: 'Primary agent for DeFi operations.',
     wallets: [
-      { id: 'w1', provider: 'Bitget Wallet', name: 'Main Wallet', address: '0x71C...3E4F', isDefault: true },
+      {
+  id: 'w1',
+  provider: 'Bitget Wallet',
+  name: 'Main Wallet',
+  address: '0xd787C011AE6d457B97Bf8D67e0BE85b149b01AB5',
+  isDefault: true
+},
       { id: 'w2', provider: 'MetaMask', name: 'Secondary', address: '0x12A...9B2C', isDefault: false }
     ],
     health: ['Verified', 'EOA Wallet', 'Active'],
