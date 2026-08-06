@@ -6,12 +6,22 @@ import { Search, ReceiptText, FileDown } from 'lucide-react';
 
 export default function TransactionsHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('All');
   const { transactions } = useContacts();
 
-  const filteredTx = transactions.filter((t: any) =>
-    t.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.wallet.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTx = transactions.filter((t: any) => {
+    const matchesSearch = t.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.wallet.toLowerCase().includes(searchTerm.toLowerCase());
+
+    let matchesFilter = true;
+    if (filter === 'Sent') matchesFilter = t.type === 'sent';
+    else if (filter === 'Received') matchesFilter = t.type === 'received';
+    else if (filter === 'Failed') matchesFilter = t.status === 'Failed';
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const filters = ['All', 'Sent', 'Received', 'Failed'];
 
   return (
     <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
@@ -37,10 +47,15 @@ export default function TransactionsHistoryPage() {
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        <button className="rounded-full bg-[#6D5DF6] px-4 py-2 text-xs font-semibold whitespace-nowrap text-white">All</button>
-        <button className="rounded-full bg-[#F3F4F6] px-4 py-2 text-xs font-semibold whitespace-nowrap text-[#6B7280]">Sent</button>
-        <button className="rounded-full bg-[#F3F4F6] px-4 py-2 text-xs font-semibold whitespace-nowrap text-[#6B7280]">Received</button>
-        <button className="rounded-full bg-[#F3F4F6] px-4 py-2 text-xs font-semibold whitespace-nowrap text-[#6B7280]">Failed</button>
+        {filters.map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`rounded-full px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${filter === f ? 'bg-[#6D5DF6] text-white' : 'bg-[#F3F4F6] text-[#6B7280]'}`}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
       <div className="overflow-hidden rounded-[28px] border border-[#E5E7EB] bg-white shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
@@ -51,7 +66,7 @@ export default function TransactionsHistoryPage() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#EDEBFF] text-[#6D5DF6] mx-auto">
               <ReceiptText className="h-7 w-7" />
             </div>
-            <p className="text-sm text-[#6B7280]">No transactions found.</p>
+            <p className="text-sm text-[#6B7280]">No matching transactions found.</p>
           </div>
         )}
       </div>
