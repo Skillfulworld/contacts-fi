@@ -34,9 +34,10 @@ export default function SwapPage() {
           <div>
             <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
               <Sparkles className="h-3.5 w-3.5 text-[#6D5DF6]" />
-              Premium Swap
+              Swap <span className="ml-2 rounded-full bg-[#EDEBFF] px-2 py-0.5 text-[10px] text-[#6D5DF6]">Coming Soon</span>
             </div>
             <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Swap</h1>
+            <p className="mt-2 text-sm text-[#6B7280]">Cross-wallet token swaps are coming soon.</p>
           </div>
           <div className="rounded-full border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#1C1C1E] shadow-sm">
             Arc Testnet

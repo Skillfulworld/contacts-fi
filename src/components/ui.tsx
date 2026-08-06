@@ -49,6 +49,16 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
   );
 };
 
+// --- BrandLogo ---
+export const BrandLogo = () => (
+  <Link href="/" className="flex items-center gap-2 font-semibold text-[#1C1C1E] hover:text-[#6D5DF6] transition-colors">
+    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#EDEBFF] text-[#6D5DF6]">
+      <CircleDollarSign className="h-4 w-4" />
+    </div>
+    <span className="text-sm">ContactFi</span>
+  </Link>
+);
+
 // --- WalletHeader ---
 export const WalletHeader = () => {
   const { isConnected, isConnecting, walletAddress, walletName, chainId, connectWallet, disconnectWallet, switchToArcTestnet } = useWallet();
@@ -278,7 +288,7 @@ export const SectionHeader = ({ title, action }: { title: string; action?: React
 export const BottomNavigation = () => {
   const pathname = usePathname();
   const links = [
-    { href: '/', label: 'Contacts', icon: User },
+    { href: '/contacts', label: 'Contacts', icon: User },
     { href: '/send', label: 'Send', icon: ArrowUpRight },
     { href: '/swap', label: 'Swap', icon: ArrowLeftRight },
     { href: '/transactions', label: 'Activity', icon: ReceiptText },
