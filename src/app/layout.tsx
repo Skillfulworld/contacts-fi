@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { BottomNavigation } from "@/components/ui";
 import { ContactProvider } from "@/context/ContactContext";
+import { WalletProvider } from "@/context/WalletContext";
 
 export const metadata: Metadata = {
   title: "Contacts-Fi",
@@ -16,13 +17,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased selection:bg-[var(--md-sys-color-primary-container)]">
-  <ContactProvider>
-    <main className="max-w-md mx-auto min-h-screen pb-24 relative bg-[var(--md-sys-color-background)] shadow-2xl shadow-black/10">
-      {children}
-      <BottomNavigation />
-    </main>
-  </ContactProvider>
-</body>
+        <WalletProvider>
+          <ContactProvider>
+            <main className="max-w-md mx-auto min-h-screen pb-24 relative bg-[var(--md-sys-color-background)] shadow-2xl shadow-black/10">
+              {children}
+              <BottomNavigation />
+            </main>
+          </ContactProvider>
+        </WalletProvider>
+      </body>
     </html>
   );
 }

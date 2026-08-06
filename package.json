@@ -9,14 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@circle-fin/adapter-viem-v2": "^1.14.1",
     "@circle-fin/app-kit": "1.10.0",
-    "@dynamic-labs/ethereum": "4.92.4",
-    "@dynamic-labs/sdk-react-core": "4.92.4",
     "@supabase/supabase-js": "2.110.7",
     "lucide-react": "^1.28.0",
     "next": "14.2.35",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "viem": "^2.55.11"
   },
   "devDependencies": {
     "@types/node": "^20",
