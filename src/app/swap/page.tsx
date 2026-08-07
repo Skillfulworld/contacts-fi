@@ -1,159 +1,73 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { ArrowLeftRight, Sparkles, Wallet2, ShieldCheck } from 'lucide-react';
-import { Button, Card } from '@/components/ui';
-
-const mockTokens = [
-  { symbol: 'ETH', name: 'Ethereum', balance: '4.82', price: 1842.18, accent: 'bg-[#EAF4FF] text-[#4DA3FF]' },
-  { symbol: 'USDC', name: 'USD Coin', balance: '1820.45', price: 1.0, accent: 'bg-[#EDEBFF] text-[#6D5DF6]' },
-  { symbol: 'ARB', name: 'Arc Token', balance: '1280.12', price: 2.46, accent: 'bg-[#FFF0EA] text-[#FF7A59]' },
-];
+import { ArrowDown, Check } from 'lucide-react';
+import { Card } from '@/components/ui';
 
 export default function SwapPage() {
-  const [fromToken, setFromToken] = useState(mockTokens[0]);
-  const [toToken, setToToken] = useState(mockTokens[1]);
-  const [amount, setAmount] = useState('1.25');
-
-  const estimatedOutput = useMemo(() => {
-    const numericAmount = Number(amount) || 0;
-    const rate = fromToken.price / toToken.price;
-    return (numericAmount * rate).toFixed(2);
-  }, [amount, fromToken.price, toToken.price]);
-
-  const handleReverse = () => {
-    const previousFrom = fromToken;
-    setFromToken(toToken);
-    setToToken(previousFrom);
-  };
-
   return (
     <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
-      <div className="mx-auto flex max-w-2xl flex-col gap-4 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-              <Sparkles className="h-3.5 w-3.5 text-[#6D5DF6]" />
-              Swap <span className="ml-2 rounded-full bg-[#EDEBFF] px-2 py-0.5 text-[10px] text-[#6D5DF6]">Coming Soon</span>
-            </div>
-            <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Swap</h1>
-            <p className="mt-2 text-sm text-[#6B7280]">Cross-wallet token swaps are coming soon.</p>
-          </div>
-          <div className="rounded-full border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#1C1C1E] shadow-sm">
-            Arc Testnet
-          </div>
+      <div className="mx-auto flex max-w-lg flex-col gap-6 py-4">
+        <div className="text-center">
+            <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Swap Tokens</h1>
+            <p className="mt-2 text-sm text-[#6B7280]">Convert assets before sending.</p>
         </div>
 
-        <Card className="border-none bg-[#EDEBFF] p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-[#2F2A6B]">Route ready</div>
-              <div className="text-sm text-[#6B7280]">Mock quotes prepared for future DEX integration.</div>
+        {/* Swap Card */}
+        <Card className="p-6">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#6B7280]">You Pay</label>
+            <div className="text-4xl font-bold text-[#1C1C1E] py-2">0.00</div>
+            <div className="flex justify-between items-center bg-[#F5F6F8] rounded-2xl p-2 cursor-pointer border">
+                <span className="font-semibold px-2">USDC</span>
+                <span className="px-2">▼</span>
             </div>
-            <div className="rounded-2xl bg-white/70 p-3 text-[#6D5DF6]">
-              <ShieldCheck className="h-5 w-5" />
+          </div>
+          
+          <div className="my-4 flex justify-center">
+            <div className="rounded-full bg-[#F5F6F8] p-3 border border-[#E5E7EB]">
+              <ArrowDown className="h-6 w-6 text-[#6D5DF6]" />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[#6B7280]">You Receive</label>
+            <div className="text-4xl font-bold text-[#1C1C1E] py-2">0.00</div>
+            <div className="flex justify-between items-center bg-[#F5F6F8] rounded-2xl p-2 cursor-pointer border">
+                <span className="font-semibold px-2">USDT</span>
+                <span className="px-2">▼</span>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-[#1C1C1E]">From</div>
-              <div className="text-xs text-[#6B7280]">Choose a token to send</div>
-            </div>
-            <div className="rounded-full bg-[#F5F6F8] px-3 py-1 text-xs font-semibold text-[#6B7280]">
-              Balance {fromToken.balance}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-[24px] border border-[#E5E7EB] bg-[#F5F6F8] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <button className="flex items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-left shadow-sm">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${fromToken.accent}`}>
-                  {fromToken.symbol[0]}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-[#1C1C1E]">{fromToken.symbol}</div>
-                  <div className="text-xs text-[#6B7280]">{fromToken.name}</div>
-                </div>
-              </button>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-28 rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-right text-lg font-semibold text-[#1C1C1E] outline-none"
-                placeholder="0"
-              />
-            </div>
-            <div className="text-right text-xs text-[#6B7280]">~ ${Number(amount || 0).toFixed(2)}</div>
-          </div>
-
-          <div className="my-3 flex justify-center">
-            <button
-              onClick={handleReverse}
-              className="rounded-full border border-[#E5E7EB] bg-white p-3 text-[#6D5DF6] shadow-sm transition-all duration-200 hover:-translate-y-0.5"
-              aria-label="Reverse swap"
-            >
-              <ArrowLeftRight className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-[#1C1C1E]">To</div>
-              <div className="text-xs text-[#6B7280]">Estimated destination token</div>
-            </div>
-            <div className="rounded-full bg-[#F5F6F8] px-3 py-1 text-xs font-semibold text-[#6B7280]">
-              Balance {toToken.balance}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-[#E5E7EB] bg-[#F5F6F8] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <button className="flex items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-left shadow-sm">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${toToken.accent}`}>
-                  {toToken.symbol[0]}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-[#1C1C1E]">{toToken.symbol}</div>
-                  <div className="text-xs text-[#6B7280]">{toToken.name}</div>
-                </div>
-              </button>
-              <div className="text-right">
-                <div className="text-lg font-semibold text-[#1C1C1E]">{estimatedOutput}</div>
-                <div className="text-xs text-[#6B7280]">Estimated output</div>
-              </div>
-            </div>
-          </div>
+        {/* Info Cards */}
+        <Card className="bg-gradient-to-br from-[#EDEBFF] to-[#EAF4FF] border-none p-6">
+            <div className="text-lg font-semibold text-[#2F2A6B]">Powered by Arc</div>
+            <p className="text-sm text-[#2F2A6B] mt-2 leading-relaxed">
+                Cross-token payments are coming soon. Soon you'll be able to automatically swap supported assets before sending USDC to any contact.
+            </p>
         </Card>
 
-        <Card className="p-4 sm:p-5">
-          <div className="flex items-center justify-between rounded-[20px] border border-[#E5E7EB] bg-[#F5F6F8] px-4 py-3 text-sm">
-            <div className="flex items-center gap-2 text-[#6B7280]">
-              <Wallet2 className="h-4 w-4" />
-              Network
+        <Card className="p-6">
+            <h3 className="font-semibold text-lg mb-4">Why ContactFi Swap?</h3>
+            <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                    <Check className="text-green-500 h-5 w-5"/>
+                    <span className="text-sm font-medium">No manual bridge</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Check className="text-green-500 h-5 w-5"/>
+                    <span className="text-sm font-medium">No DEX hunting</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Check className="text-green-500 h-5 w-5"/>
+                    <span className="text-sm font-medium">One payment flow</span>
+                </div>
             </div>
-            <div className="font-semibold text-[#1C1C1E]">Arc Testnet</div>
-          </div>
-
-          <div className="mt-4 rounded-[20px] border border-[#E5E7EB] bg-[#F5F6F8] p-4">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="text-[#6B7280]">Estimated output</span>
-              <span className="font-semibold text-[#1C1C1E]">{estimatedOutput} {toToken.symbol}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-[#6B7280]">Route</span>
-              <span className="font-semibold text-[#1C1C1E]">Mock quote • ready for DEX</span>
-            </div>
-          </div>
-
-          <Button className="mt-4 w-full" variant="primary">
-            Swap
-          </Button>
         </Card>
+
+        <button disabled className="w-full rounded-2xl bg-[#E5E7EB] text-[#6B7280] py-4 font-semibold text-lg">
+            Swap Coming Soon
+        </button>
       </div>
     </div>
   );

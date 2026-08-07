@@ -27,11 +27,7 @@ export default function TransactionsHistoryPage() {
     <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
       <div className="flex items-center justify-between py-6">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-            <ReceiptText className="h-3.5 w-3.5 text-[#6D5DF6]" />
-            Activity
-          </div>
-          <h1 className="text-2xl font-semibold text-[var(--md-sys-color-on-background)]">Transactions</h1>
+          <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Activity</h1>
         </div>
       </div>
 
@@ -60,7 +56,9 @@ export default function TransactionsHistoryPage() {
 
       <div className="overflow-hidden rounded-[28px] border border-[#E5E7EB] bg-white shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
         {filteredTx.length > 0 ? (
-          filteredTx.map((tx: any) => <TransactionCard key={tx.id} tx={tx} />)
+          [...filteredTx]
+            .reverse()
+            .map((tx: any) => <TransactionCard key={tx.id} tx={tx} />)
         ) : (
           <div className="p-16 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#EDEBFF] text-[#6D5DF6] mx-auto">

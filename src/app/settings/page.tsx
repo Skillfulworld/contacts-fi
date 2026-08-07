@@ -39,10 +39,6 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
       <div className="py-6">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-          <Sparkles className="h-3.5 w-3.5 text-[#6D5DF6]" />
-          Preferences
-        </div>
         <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Settings</h1>
       </div>
 
@@ -63,14 +59,14 @@ export default function SettingsPage() {
 
       <div className="space-y-4">
         <SectionHeader title="Preferences" />
-        <SettingItem icon={<Moon className="h-5 w-5" />} title="Dark Mode" description="Coming soon" />
-        <SettingToggle icon={<Bell className="h-5 w-5" />} title="Notifications" checked={notifications} onChange={() => setNotifications(!notifications)} />
-        <SettingItem icon={<Languages className="h-5 w-5" />} title="Language" description="English (US)" onClick={() => setDialog({ title: 'Language', message: 'Multi-language support coming soon.' })} />
+        <SettingItem title="Dark Mode" description="Coming soon" />
+        <SettingToggle title="Notifications" checked={notifications} onChange={() => setNotifications(!notifications)} />
+        <SettingItem title="Language" description="English (US)" onClick={() => setDialog({ title: 'Language', message: 'Multi-language support coming soon.' })} />
 
         <SectionHeader title="About" />
-        <SettingItem icon={<Info className="h-5 w-5" />} title="Version" description="1.0.0-alpha" onClick={() => setDialog({ title: 'Version', message: 'Contacts-Fi\nVersion 1.0.0-alpha\nBuilt for Arc Network Hackathon' })} />
-        <SettingItem icon={<ShieldCheck className="h-5 w-5" />} title="Privacy Policy" onClick={() => setDialog({ title: 'Privacy Policy', message: 'Privacy Policy coming soon.' })} />
-        <SettingItem icon={<HelpCircle className="h-5 w-5" />} title="Support" onClick={() => setDialog({ title: 'Support', message: 'Support Center coming soon.' })} />
+        <SettingItem title="Version" description="1.0.0-alpha" onClick={() => setDialog({ title: 'Version', message: 'Contacts-Fi\nVersion 1.0.0-alpha\nBuilt for Arc Network Hackathon' })} />
+        <SettingItem title="Privacy Policy" onClick={() => setDialog({ title: 'Privacy Policy', message: 'Privacy Policy coming soon.' })} />
+        <SettingItem title="Support" onClick={() => setDialog({ title: 'Support', message: 'Support Center coming soon.' })} />
       </div>
 
       {dialog && (
@@ -88,10 +84,9 @@ export default function SettingsPage() {
   );
 }
 
-function SettingItem({ icon, title, description, onClick }: { icon: React.ReactNode; title: string; description?: string; onClick?: () => void }) {
+function SettingItem({ title, description, onClick }: { title: string; description?: string; onClick?: () => void }) {
   return (
     <button type="button" onClick={onClick} className="flex w-full items-center gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-4 text-left transition-colors hover:bg-[#F9FAFB]">
-      <div className="text-[#6D5DF6]">{icon}</div>
       <div className="flex-1">
         <div className="font-medium text-[#1C1C1E]">{title}</div>
         {description && <div className="text-sm text-[#6B7280]">{description}</div>}
@@ -101,10 +96,9 @@ function SettingItem({ icon, title, description, onClick }: { icon: React.ReactN
   );
 }
 
-function SettingToggle({ icon, title, checked, onChange }: { icon: React.ReactNode; title: string; checked: boolean; onChange: () => void }) {
+function SettingToggle({ title, checked, onChange }: { title: string; checked: boolean; onChange: () => void }) {
   return (
     <div className="flex items-center gap-4 rounded-[24px] border border-[#E5E7EB] bg-white p-4">
-      <div className="text-[#6D5DF6]">{icon}</div>
       <div className="flex-1 font-medium text-[#1C1C1E]">{title}</div>
       <button onClick={onChange} className={`relative h-7 w-12 rounded-full transition-colors ${checked ? 'bg-[#6D5DF6]' : 'bg-[#E5E7EB]'}`}>
         <div className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${checked ? 'left-6' : 'left-1'}`} />

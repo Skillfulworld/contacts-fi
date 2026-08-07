@@ -25,11 +25,8 @@ export default function ContactsListPage() {
       <div className="bg-[var(--md-sys-color-background)] px-4 pb-3 pt-4">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-              <Contact2 className="h-3.5 w-3.5" />
-              Contacts-Fi
-            </div>
-            <h1 className="text-2xl font-semibold text-[var(--md-sys-color-on-background)]">The Contacts app for crypto</h1>
+            <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)] mb-1">Contacts</h1>
+            <p className="text-[#6B7280]">The Contacts app for crypto</p>
           </div>
         </div>
 
