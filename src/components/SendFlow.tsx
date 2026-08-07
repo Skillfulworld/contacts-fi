@@ -8,7 +8,7 @@ import { Send, CheckCircle2, ExternalLink, Copy, AlertCircle } from 'lucide-reac
 export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipient: { name: string; address?: string; wallets?: any[] }; onClose: () => void; onTransactionComplete: (tx: any) => void }) => {
   const { adapter, walletAddress, walletName, chainId, isConnected, refreshChain, switchToArcTestnet } = useWallet();
   const [sendStep, setSendStep] = useState<'network' | 'review' | 'sending' | 'success' | 'error'>('network');
-  const [amount, setAmount] = useState('10');
+  const [amount, setAmount] = useState('');
   const [manualAddress, setManualAddress] = useState(recipient.address || '');
   const [selectedWalletId, setSelectedWalletId] = useState('');
   const [estimatedGas, setEstimatedGas] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
         setSendStep('network');
         return;
       }
-      await prepareReview();
+      setSendStep('review');
     };
     init();
   }, []);
@@ -72,7 +72,7 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
     try {
       const result = await switchToArcTestnet();
       if (result.ok) {
-        await prepareReview();
+        setSendStep('review');
       } else {
         setSendStep('error');
         setSendError(result.error || 'Arc Testnet could not be activated.');
@@ -134,7 +134,7 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[32px] border border-[#E5E7EB] bg-white p-6 shadow-[0_16px_40px_rgba(17,24,39,0.16)]">
+      <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-[32px] border border-[#E5E7EB] bg-white p-6 shadow-[0_16px_40px_rgba(17,24,39,0.16)]">
         <div className="mb-4 flex items-center justify-between flex-shrink-0">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">Send USDC</div>

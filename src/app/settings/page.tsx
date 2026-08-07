@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, SectionHeader, Avatar } from '@/components/ui';
 import {
   Moon,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
 
 type DialogState = {
   title: string;
@@ -19,8 +20,21 @@ type DialogState = {
 } | null;
 
 export default function SettingsPage() {
+  const { walletAddress } = useWallet();
   const [notifications, setNotifications] = useState(true);
   const [dialog, setDialog] = useState<DialogState>(null);
+  
+  const [profile, setProfile] = useState({ name: 'My Profile', username: '@username', avatar: null as string | null });
+
+  useEffect(() => {
+    if(walletAddress) {
+      setProfile({
+        name: localStorage.getItem(`profile-${walletAddress}-name`) || 'My Profile',
+        username: localStorage.getItem(`profile-${walletAddress}-username`) || '@username',
+        avatar: localStorage.getItem(`profile-${walletAddress}-avatar`) || null,
+      });
+    }
+  }, [walletAddress]);
 
   return (
     <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
@@ -34,10 +48,14 @@ export default function SettingsPage() {
 
       <Link href="/settings/profile" className="mb-8 block">
         <Card className="flex items-center gap-4 border-none bg-[#EDEBFF]">
-          <Avatar initials="ME" color="#6D5DF6" size="lg" />
+          {profile.avatar ? (
+            <img src={profile.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+          ) : (
+            <Avatar initials={profile.name.substring(0,2).toUpperCase()} color="#6D5DF6" size="lg" />
+          )}
           <div>
-            <div className="font-semibold text-[#2F2A6B]">My Profile</div>
-            <div className="text-sm text-[#6B7280]">Manage your identity</div>
+            <div className="font-semibold text-[#2F2A6B]">{profile.name}</div>
+            <div className="text-sm text-[#6B7280]">{profile.username}</div>
           </div>
           <ChevronRight className="ml-auto h-5 w-5 text-[#6D5DF6]" />
         </Card>
