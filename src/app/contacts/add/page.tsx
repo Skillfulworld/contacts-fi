@@ -14,7 +14,7 @@ export default function AddContactPage() {
   const handleSave = () => {
     if (!name.trim()) return;
     addContact({ name, notes });
-    router.push('/');
+    router.push('/contacts');
   };
 
   return (

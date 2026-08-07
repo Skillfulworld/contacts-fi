@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
@@ -52,10 +53,10 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
 // --- BrandLogo ---
 export const BrandLogo = () => (
   <Link href="/" className="flex items-center gap-2 font-semibold text-[#1C1C1E] hover:text-[#6D5DF6] transition-colors">
-    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#EDEBFF] text-[#6D5DF6]">
-      <CircleDollarSign className="h-4 w-4" />
+    <div className="flex h-6 w-6 items-center justify-center rounded-md overflow-hidden">
+      <Image src="/branding/contactfi-icon.png" alt="ContactFi Icon" width={24} height={24} className="h-full w-full object-contain" />
     </div>
-    <span className="text-sm">ContactFi</span>
+    <Image src="/branding/contactfi-wordmark.png" alt="ContactFi" width={84} height={16} className="h-4 w-auto object-contain" priority />
   </Link>
 );
 

@@ -150,6 +150,7 @@ export const ContactProvider = ({ children }: { children: React.ReactNode }) => 
     };
 
     setTransactions((prev) => [...prev, nextTransaction]);
+    addToast('Transaction successful');
 
     if (transaction.contactId) {
       setContacts((prev) => prev.map((contact) => {
