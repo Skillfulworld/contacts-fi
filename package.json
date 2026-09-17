@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@circle-fin/adapter-viem-v2": "^1.14.1",
-    "@circle-fin/app-kit": "1.10.0",
+    "@circle-fin/adapter-viem-v2": "^1.18.0",
+    "@circle-fin/app-kit": "^1.15.2",
     "@supabase/supabase-js": "2.110.7",
     "framer-motion": "^13.0.0",
     "lucide-react": "^1.28.0",

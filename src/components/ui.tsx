@@ -12,20 +12,11 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Settings,
-  LayoutDashboard,
-  ChevronLeft,
-  Pencil,
-  Trash2,
   Copy,
-  CheckCircle,
-  AlertCircle,
-  CircleDollarSign,
-  ShieldCheck,
   ReceiptText,
-  Contact2,
   ArrowLeftRight,
 } from 'lucide-react';
-import { getChainDisplayName, useWallet } from '@/context/WalletContext';
+import { getChainDisplayName, isArcMainnetChainId, useWallet } from '@/context/WalletContext';
 
 // --- Avatar ---
 export const Avatar = ({ initials, color, size = 'md' }: { initials: string; color?: string; size?: 'sm' | 'md' | 'lg' | 'xl' }) => {
@@ -62,7 +53,7 @@ export const BrandLogo = () => (
 
 // --- WalletHeader ---
 export const WalletHeader = () => {
-  const { isConnected, isConnecting, walletAddress, walletName, chainId, connectWallet, disconnectWallet, switchToArcTestnet } = useWallet();
+  const { isConnected, isConnecting, walletAddress, walletName, chainId, connectWallet, disconnectWallet, switchToArcMainnet } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
@@ -90,7 +81,7 @@ export const WalletHeader = () => {
 
   const handleSwitchNetwork = async () => {
     setSwitchError(null);
-    const result = await switchToArcTestnet();
+    const result = await switchToArcMainnet();
     if (!result.ok) {
       setSwitchError(result.error || 'Unable to switch network.');
     } else {
@@ -98,7 +89,7 @@ export const WalletHeader = () => {
     }
   };
 
-  const isArcTestnet = chainId?.trim().toLowerCase() === '0x4cef52' || chainId === '5042002';
+  const isArcMainnet = isArcMainnetChainId(chainId);
 
   if (isConnected) {
     return (
@@ -119,10 +110,10 @@ export const WalletHeader = () => {
         {menuOpen && (
           <div className="absolute right-0 top-14 z-50 w-56 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2 shadow-[0_14px_36px_rgba(17,24,39,0.12)]">
             <div className="mb-2 px-2 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-              {isArcTestnet ? '🟣 Arc Testnet' : '🔴 Wrong Network'}
+              {isArcMainnet ? '🟣 Arc Mainnet' : '🔴 Wrong Network'}
             </div>
             <div className="mb-2 px-2 text-sm font-medium text-[#1C1C1E]">
-              {isArcTestnet ? 'Connected' : `Current Chain: ${getChainDisplayName(chainId)}`}
+              {isArcMainnet ? 'Connected' : `Current Chain: ${getChainDisplayName(chainId)}`}
             </div>
             <div className="mb-2 break-all px-2 text-xs text-[#6B7280]">
               {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connected'}
@@ -131,10 +122,10 @@ export const WalletHeader = () => {
               <Copy className="h-4 w-4" />
               Copy Address
             </button>
-            {!isArcTestnet && (
+            {!isArcMainnet && (
               <button onClick={handleSwitchNetwork} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#6D5DF6] hover:bg-[#EDEBFF]">
                 <Wallet className="h-4 w-4" />
-                Switch to Arc Testnet
+                Switch to Arc Mainnet
               </button>
             )}
             <button onClick={() => { disconnectWallet(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#D64545] hover:bg-[#FDECEC]">
@@ -164,6 +155,7 @@ export const WalletHeader = () => {
 };
 
 // --- Button ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const Button = ({ children, variant = 'primary', className = '', ...props }: any) => {
   const variantClass = variant === 'primary'
     ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-[0_10px_24px_rgba(109,93,246,0.16)]'
@@ -186,6 +178,7 @@ export const Card = ({ children, className = '' }: { children: ReactNode; classN
 );
 
 // --- Input ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const Input = ({ label, ...props }: any) => (
   <div className="flex w-full flex-col gap-2">
     {label && <label className="ml-1 text-sm font-medium text-[#6B7280]">{label}</label>}
@@ -210,6 +203,7 @@ export const SearchBar = ({ value, onChange }: { value: string; onChange: (v: st
 );
 
 // --- WalletCard ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const WalletCard = ({ wallet }: { wallet: any }) => {
   const providerColors: Record<string, string> = {
     'Bitget Wallet': 'text-[#6D5DF6] bg-[#EDEBFF]',
@@ -239,6 +233,7 @@ export const WalletCard = ({ wallet }: { wallet: any }) => {
 };
 
 // --- TransactionCard ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const TransactionCard = ({ tx }: { tx: any }) => (
   <div className="flex items-center justify-between border-b border-[#E5E7EB] p-4 last:border-0 transition-colors hover:bg-[#F9FAFB]">
     <div className="flex items-center gap-4">

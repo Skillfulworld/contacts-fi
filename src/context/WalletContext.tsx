@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { AppKit, BridgeChain } from '@circle-fin/app-kit';
+import { AppKit } from '@circle-fin/app-kit';
 import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2';
 
 type WalletProviderInfo = {
@@ -29,31 +29,40 @@ type WalletContextValue = {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   refreshChain: () => Promise<string | null>;
+  switchToArcMainnet: () => Promise<{ ok: boolean; chainId?: string | null; error?: string | null }>;
+  /** @deprecated alias for switchToArcMainnet */
   switchToArcTestnet: () => Promise<{ ok: boolean; chainId?: string | null; error?: string | null }>;
 };
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
-export const ARC_TESTNET_NETWORK = {
-  chainId: '0x4CEF52',
-  chainName: 'Arc Testnet',
+// Arc Mainnet — chain ID 5042 (0x13B2)
+export const ARC_MAINNET_NETWORK = {
+  chainId: '0x13B2',
+  chainName: 'Arc',
   nativeCurrency: {
     name: 'USDC',
     symbol: 'USDC',
     decimals: 18,
   },
-  rpcUrls: ['https://rpc.testnet.arc.network'],
-  blockExplorerUrls: ['https://testnet.arcscan.app'],
+  rpcUrls: ['https://rpc.mainnet.arc.io'],
+  blockExplorerUrls: ['https://explorer.arc.io'],
 };
 
-export const isArcTestnetChainId = (value?: string | null) => {
+// Kept for backward-compat references; points at mainnet for production
+export const ARC_TESTNET_NETWORK = ARC_MAINNET_NETWORK;
+
+export const isArcMainnetChainId = (value?: string | null) => {
   if (!value) return false;
   const normalized = value.trim().toLowerCase();
-  return normalized === '0x4cef52' || normalized === '5042002';
+  return normalized === '0x13b2' || normalized === '5042';
 };
 
+/** @deprecated use isArcMainnetChainId */
+export const isArcTestnetChainId = isArcMainnetChainId;
+
 export const getChainDisplayName = (value?: string | null) => {
-  if (isArcTestnetChainId(value)) return 'Arc Testnet';
+  if (isArcMainnetChainId(value)) return 'Arc Mainnet';
   if (!value) return 'Unknown Chain';
   return `Chain ${value}`;
 };
@@ -69,11 +78,13 @@ export const getAppKitInstance = () => {
 
 const toWalletName = (provider: BrowserWallet | null | undefined) => {
   const providerInfo = provider?.info as WalletProviderInfo | undefined;
-  const name = providerInfo?.name || (provider as any)?.name || (provider as any)?.walletName;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = provider as any;
+  const name = providerInfo?.name || p?.name || p?.walletName;
   if (typeof name === 'string' && name.trim()) {
     return name;
   }
-  const providerKey = (provider as any)?.isMetaMask ? 'MetaMask' : 'Browser Wallet';
+  const providerKey = p?.isMetaMask ? 'MetaMask' : 'Browser Wallet';
   return providerKey;
 };
 
@@ -113,7 +124,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       const globalWindow = window as Window & typeof globalThis & { ethereum?: BrowserWallet | { providers?: BrowserWallet[] } };
       const injected = globalWindow.ethereum as BrowserWallet | undefined;
       if (injected) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (Array.isArray((injected as any).providers)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (injected as any).providers.forEach((provider: BrowserWallet) => addProvider(provider));
         } else {
           addProvider(injected);
@@ -147,7 +160,9 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const globalWindow = window as Window & typeof globalThis & { ethereum?: BrowserWallet | { providers?: BrowserWallet[] } };
       const injected = globalWindow.ethereum as BrowserWallet | undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const providerCandidates = Array.isArray((injected as any)?.providers)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ? ((injected as any).providers as BrowserWallet[])
         : injected
           ? [injected]
@@ -166,6 +181,7 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       const appKit = getAppKitInstance();
       void appKit;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdAdapter = await createViemAdapterFromProvider({ provider: provider as any });
       const networkId = await provider.request({ method: 'eth_chainId' }) as string | number | undefined;
       setAdapter(createdAdapter);
@@ -207,31 +223,32 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const switchToArcTestnet = async () => {
+  const switchToArcMainnet = async () => {
     if (!walletProvider?.request) {
       return { ok: false, error: 'Wallet provider is not available.' };
     }
 
     try {
       const currentChainId = await refreshChain();
-      if (isArcTestnetChainId(currentChainId)) {
+      if (isArcMainnetChainId(currentChainId)) {
         return { ok: true, chainId: currentChainId, error: null };
       }
 
       try {
         await walletProvider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: ARC_TESTNET_NETWORK.chainId }],
+          params: [{ chainId: ARC_MAINNET_NETWORK.chainId }],
         });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (switchError: any) {
         if (switchError.code === 4902) {
           await walletProvider.request({
             method: 'wallet_addEthereumChain',
-            params: [ARC_TESTNET_NETWORK],
+            params: [ARC_MAINNET_NETWORK],
           });
           await walletProvider.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: ARC_TESTNET_NETWORK.chainId }],
+            params: [{ chainId: ARC_MAINNET_NETWORK.chainId }],
           });
         } else {
           throw switchError;
@@ -239,17 +256,21 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const refreshedChain = await refreshChain();
-      if (isArcTestnetChainId(refreshedChain)) {
+      if (isArcMainnetChainId(refreshedChain)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const nextAdapter = await createViemAdapterFromProvider({ provider: walletProvider as any });
         setAdapter(nextAdapter);
         return { ok: true, chainId: refreshedChain, error: null };
       }
-      return { ok: false, chainId: refreshedChain, error: 'Failed to switch to Arc Testnet.' };
+      return { ok: false, chainId: refreshedChain, error: 'Failed to switch to Arc Mainnet.' };
     } catch (error: any) {
       console.error('Switch network error', error);
       return { ok: false, error: error?.message || 'The wallet rejected the request.' };
     }
   };
+
+  // Backward-compat alias
+  const switchToArcTestnet = switchToArcMainnet;
 
   const value = useMemo<WalletContextValue>(() => ({
     adapter,
@@ -263,6 +284,7 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     connectWallet,
     disconnectWallet,
     refreshChain,
+    switchToArcMainnet,
     switchToArcTestnet,
   }), [adapter, availableWallets, chainId, isConnecting, walletAddress, walletName, walletProvider]);
 

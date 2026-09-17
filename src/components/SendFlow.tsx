@@ -1,15 +1,26 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Button, Card } from '@/components/ui';
-import { useWallet, getAppKitInstance, isArcTestnetChainId } from '@/context/WalletContext';
+import { Button } from '@/components/ui';
+import { useWallet, getAppKitInstance, isArcMainnetChainId } from '@/context/WalletContext';
 import { BridgeChain } from '@circle-fin/app-kit';
 import { Send, CheckCircle2, ExternalLink, Copy, AlertCircle } from 'lucide-react';
 
-export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipient: { name: string; address?: string; wallets?: any[] }; onClose: () => void; onTransactionComplete: (tx: any) => void }) => {
-  const { adapter, walletAddress, walletName, chainId, isConnected, refreshChain, switchToArcTestnet } = useWallet();
+type Wallet = { id: string; address?: string; name?: string; provider?: string; [key: string]: unknown };
+type Recipient = { name: string; address?: string; wallets?: Wallet[] };
+
+export const SendFlow = ({
+  recipient,
+  onClose,
+  onTransactionComplete,
+}: {
+  recipient: Recipient;
+  onClose: () => void;
+  onTransactionComplete: (tx: { id: string; amount: string; status: string }) => void;
+}) => {
+  const { adapter, walletAddress, walletName, chainId, isConnected, refreshChain, switchToArcMainnet } = useWallet();
   const [sendStep, setSendStep] = useState<'network' | 'review' | 'sending' | 'success' | 'error'>('network');
   const [amount, setAmount] = useState('');
-  const [manualAddress, setManualAddress] = useState(recipient.address || '');
+  const [manualAddress] = useState(recipient.address || '');
   const [selectedWalletId, setSelectedWalletId] = useState('');
   const [estimatedGas, setEstimatedGas] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -18,8 +29,8 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
   const [isWorking, setIsWorking] = useState(false);
   const [copiedHash, setCopiedHash] = useState(false);
 
-  const wallets = recipient.wallets || [{ id: 'manual', address: manualAddress, name: 'Manual Address' }];
-  const selectedWallet = wallets.find((w: any) => w.id === selectedWalletId) || wallets[0];
+  const wallets: Wallet[] = recipient.wallets || [{ id: 'manual', address: manualAddress, name: 'Manual Address' }];
+  const selectedWallet = wallets.find((w) => w.id === selectedWalletId) || wallets[0];
 
   useEffect(() => {
     const init = async () => {
@@ -30,54 +41,28 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
         return;
       }
       const currentChain = chainId || (await refreshChain());
-      if (!isArcTestnetChainId(currentChain)) {
+      if (!isArcMainnetChainId(currentChain)) {
         setSendStep('network');
         return;
       }
       setSendStep('review');
     };
-    init();
+    void init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const prepareReview = async () => {
-    if (!adapter || !walletAddress) {
-      setSendStep('error');
-      setSendError('Connect your wallet before sending USDC.');
-      return;
-    }
-    setIsWorking(true);
-    setSendError(null);
-    try {
-      const kit = getAppKitInstance();
-      const sendParams = {
-        from: { adapter: adapter as any, chain: BridgeChain.Arc_Testnet },
-        to: selectedWallet?.address || manualAddress || walletAddress,
-        amount,
-        token: 'USDC',
-      };
-      const estimate = await kit.estimateSend(sendParams as any);
-      setEstimatedGas(estimate?.fee ? `${estimate.fee} wei` : 'Unavailable');
-      setSendStep('review');
-    } catch (error: any) {
-      setSendStep('error');
-      setSendError(`Preparation failed: ${error?.message || 'Unknown error'}`);
-    } finally {
-      setIsWorking(false);
-    }
-  };
 
   const handleSwitchNetwork = async () => {
     setIsWorking(true);
     setSendError(null);
     try {
-      const result = await switchToArcTestnet();
+      const result = await switchToArcMainnet();
       if (result.ok) {
         setSendStep('review');
       } else {
         setSendStep('error');
-        setSendError(result.error || 'Arc Testnet could not be activated.');
+        setSendError(result.error || 'Arc Mainnet could not be activated.');
       }
-    } catch (error) {
+    } catch {
       setSendStep('error');
       setSendError('The network switch failed. Please try again.');
     } finally {
@@ -96,15 +81,25 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
     setSendStep('sending');
     try {
       const kit = getAppKitInstance();
-      const sendParams = {
-        from: { adapter: adapter as any, chain: BridgeChain.Arc_Testnet },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sendParams: any = {
+        from: { adapter, chain: BridgeChain.Arc },
         to: selectedWallet?.address || manualAddress || walletAddress,
         amount,
         token: 'USDC',
       };
-      const result = await kit.send(sendParams as any);
-      const nextTxHash = (result as any)?.txHash || (result as any)?.transactionHash || null;
-      const nextExplorerUrl = (result as any)?.explorerUrl || (result as any)?.explorer?.url || null;
+      // Estimate gas for display before sending (best effort)
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const estimate = await kit.estimateSend(sendParams) as any;
+        setEstimatedGas(estimate?.fee ? `${estimate.fee} wei` : null);
+      } catch {
+        setEstimatedGas(null);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await kit.send(sendParams) as any;
+      const nextTxHash: string | null = result?.txHash || result?.transactionHash || null;
+      const nextExplorerUrl: string | null = result?.explorerUrl || result?.explorer?.url || null;
       onTransactionComplete({
         id: nextTxHash || `tx-${Date.now()}`,
         amount: `${amount} USDC`,
@@ -113,9 +108,9 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
       setTxHash(nextTxHash);
       setExplorerUrl(nextExplorerUrl);
       setSendStep('success');
-    } catch (error: any) {
+    } catch (err: unknown) {
       setSendStep('error');
-      setSendError(`Send failed: ${error?.message || 'Unknown error'}`);
+      setSendError(`Send failed: ${(err as Error)?.message || 'Unknown error'}`);
     } finally {
       setIsWorking(false);
     }
@@ -127,8 +122,8 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
       await navigator.clipboard.writeText(txHash);
       setCopiedHash(true);
       window.setTimeout(() => setCopiedHash(false), 1500);
-    } catch (error) {
-      console.error('Failed to copy tx hash', error);
+    } catch (err: unknown) {
+      console.error('Failed to copy tx hash', err);
     }
   };
 
@@ -139,7 +134,15 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6B7280]">Send USDC</div>
             <h2 className="text-xl font-semibold text-[#1C1C1E]">
-              {sendStep === 'success' ? 'Transaction Sent' : sendStep === 'review' ? 'Review Transaction' : sendStep === 'sending' ? 'Sending' : sendStep === 'error' ? 'Unable to Continue' : 'Switch to Arc Testnet'}
+              {sendStep === 'success'
+                ? 'Transaction Sent'
+                : sendStep === 'review'
+                ? 'Review Transaction'
+                : sendStep === 'sending'
+                ? 'Sending'
+                : sendStep === 'error'
+                ? 'Unable to Continue'
+                : 'Switch to Arc Mainnet'}
             </h2>
           </div>
           <button onClick={onClose} className="rounded-full border border-[#E5E7EB] bg-[#F5F6F8] px-3 py-2 text-sm font-medium text-[#1C1C1E]">
@@ -151,10 +154,10 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
           {sendStep === 'network' && (
             <div className="space-y-4">
               <div className="rounded-[24px] border border-[#E5E7EB] bg-[#F5F6F8] p-4 text-sm leading-6 text-[#1C1C1E]">
-                Arc Testnet is required before sending USDC from this wallet.
+                Arc Mainnet is required to send USDC. This will move real funds.
               </div>
               <Button className="w-full" onClick={handleSwitchNetwork} disabled={isWorking}>
-                {isWorking ? 'Switching…' : 'Switch to Arc Testnet'}
+                {isWorking ? 'Switching…' : 'Switch to Arc Mainnet'}
               </Button>
             </div>
           )}
@@ -175,7 +178,7 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
                     onChange={(e) => setSelectedWalletId(e.target.value)}
                     className="w-full rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#1C1C1E] outline-none"
                   >
-                    {recipient.wallets.map((wallet: any) => (
+                    {recipient.wallets.map((wallet) => (
                       <option key={wallet.id} value={wallet.id}>{wallet.name || wallet.provider}</option>
                     ))}
                   </select>
@@ -203,7 +206,7 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
               <div className="rounded-[24px] border border-[#E5E7EB] bg-[#F5F6F8] p-4 text-sm text-[#1C1C1E]">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[#6B7280]">Estimated gas</span>
-                  <span className="font-semibold">{estimatedGas || 'Preparing…'}</span>
+                  <span className="font-semibold">{estimatedGas || 'Computed on send'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#6B7280]">Source wallet</span>
@@ -236,7 +239,7 @@ export const SendFlow = ({ recipient, onClose, onTransactionComplete }: { recipi
                 {explorerUrl ? (
                   <a href={explorerUrl} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#EDEBFF] px-4 py-3 text-sm font-semibold text-[#6D5DF6]">
                     <ExternalLink className="h-4 w-4" />
-                    View on ArcScan
+                    View on Arc Explorer
                   </a>
                 ) : null}
                 <button onClick={handleCopyHash} className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1C1C1E]">
