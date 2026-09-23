@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import BridgePanel from '@/components/BridgePanel';
 import { ArrowDown, ChevronDown, CheckCircle2, ExternalLink, Copy, AlertCircle, Loader2 } from 'lucide-react';
 import {
   createWalletClient,
@@ -122,6 +123,8 @@ function TokenDropdown({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SwapPage() {
   const { walletProvider, walletAddress, isConnected, switchToArcMainnet, chainId } = useWallet();
+
+  const [mode, setMode] = useState<'swap' | 'bridge'>('swap');
 
   const [tokenIn,  setTokenIn]  = useState<TokenSymbol>('USDC');
   const [tokenOut, setTokenOut] = useState<TokenSymbol>('EURC');
@@ -285,10 +288,42 @@ export default function SwapPage() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
-            Swap Tokens
+            {mode === 'swap' ? 'Swap Tokens' : 'Bridge USDC'}
           </h1>
-          <p className="mt-2 text-[#6B7280]">Convert assets before sending.</p>
+          <p className="mt-2 text-[#6B7280]">
+            {mode === 'swap' ? 'Convert assets before sending.' : 'Move USDC across chains.'}
+          </p>
         </div>
+
+        {/* Swap / Bridge toggle */}
+        <div className="flex rounded-2xl bg-white p-1 shadow-sm">
+          <button
+            onClick={() => setMode('swap')}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+              mode === 'swap'
+                ? 'bg-[#6D5DF6] text-white shadow-sm'
+                : 'text-[#6B7280] hover:text-[#111827]'
+            }`}
+          >
+            Swap
+          </button>
+          <button
+            onClick={() => setMode('bridge')}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+              mode === 'bridge'
+                ? 'bg-[#6D5DF6] text-white shadow-sm'
+                : 'text-[#6B7280] hover:text-[#111827]'
+            }`}
+          >
+            Bridge
+          </button>
+        </div>
+
+        {/* Bridge panel — mounts when mode === 'bridge', DEX below is unchanged */}
+        {mode === 'bridge' && <BridgePanel />}
+
+        {/* ── DEX section — only rendered in swap mode, completely unchanged ── */}
+        {mode === 'swap' && <>
 
         {/* Success screen */}
         {step === 'success' && (
@@ -471,6 +506,8 @@ export default function SwapPage() {
             Swaps execute on Arc Mainnet via Uniswap V3. Real funds — transactions are irreversible.
           </p>
         )}
+
+        </>} {/* end mode === 'swap' */}
 
       </div>
     </div>
