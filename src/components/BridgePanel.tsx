@@ -463,10 +463,13 @@ export default function BridgePanel() {
 
       {/* Network warning */}
       {isConnected && !isOnSrc && uiStep !== 'bridging' && (
-        <div className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span>Switch to {srcConfig.label} to bridge</span>
-          <button onClick={switchToSrcChain} className="ml-3 shrink-0 font-semibold underline">Switch</button>
-        </div>
+        <button
+          onClick={switchToSrcChain}
+          className="flex w-full items-center justify-between rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100 transition-colors"
+        >
+          <span>Wallet is on wrong network — tap to switch to {srcConfig.label}</span>
+          <span className="ml-3 shrink-0 rounded-xl bg-[#6D5DF6] px-3 py-1.5 text-xs font-semibold text-white">Switch Network</span>
+        </button>
       )}
 
       {/* CTA */}
