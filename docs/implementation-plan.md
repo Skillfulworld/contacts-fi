@@ -1,15 +1,1 @@
-Fill it in exactly like this:
-
-**Type:** Secret (already selected — keep it)
-
-**Key:** `KIT_KEY`
-
-**Value:** paste your full key exactly as-is — `LIVE_API_KEY:your_key_id:your_key_secret` — the complete string including the prefix and both colons
-
-**Environments:** check all three — Production, Preview, Development
-
-**Note (optional):** `Circle Stablecoin Service API key — rotate at console.circle.com`
-
-Then click **Save**.
-
-That's it. Once saved, every Vercel deployment will have `process.env.KIT_KEY` available to the API routes. Then connect GitHub and I'll push the code.
+Let me check if GitHub CLI is available and authenticated. The session is in Plan mode — I can't run commands or push from here. You need to **switch to Build mode** using the mode selector at the top of the interface. Once you're in Build mode, come back and say "push to GitHub" and I'll authenticate and push immediately.
