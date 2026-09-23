@@ -173,6 +173,17 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('No compatible wallet provider was detected.');
       }
 
+      // Force the wallet account picker to appear every time by requesting permissions first.
+      // wallet_requestPermissions ignores cached sessions and always prompts the user.
+      try {
+        await provider.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }],
+        });
+      } catch {
+        // Some wallets don't support wallet_requestPermissions — fall through to eth_requestAccounts.
+      }
+
       const [account] = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
       if (!account) {
         throw new Error('Wallet access was not granted.');

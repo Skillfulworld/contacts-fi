@@ -22,8 +22,8 @@ export default function LandingPage() {
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#EDEBFF] bg-[#F9F7FF] px-3 py-1">
               <span className="text-xs font-medium text-[#6D5DF6]">Powered by Arc</span>
             </div>
-            <div className="relative w-[180px] h-[36px]">
-                <Image src="/branding/contactfi-wordmark.png" alt="ContactFi" fill className="object-contain" />
+            <div className="relative w-[180px] h-[36px] overflow-hidden">
+                <Image src="/branding/contactfi-wordmark.png" alt="ContactFi" fill className="object-contain object-left" />
             </div>
         </div>
       </header>

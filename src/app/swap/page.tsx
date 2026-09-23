@@ -1,323 +1,476 @@
 "use client";
 
-import { useState, useCallback } from 'react';
-import { ArrowDown, ArrowLeftRight, AlertCircle, CheckCircle2, ExternalLink, Copy, Info } from 'lucide-react';
-import { Card, Button } from '@/components/ui';
-import { type SwapEstimate } from '@circle-fin/app-kit';
-import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2';
-import { useWallet, isArcMainnetChainId, getAppKitInstance } from '@/context/WalletContext';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowDown, ChevronDown, CheckCircle2, ExternalLink, Copy, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  createWalletClient,
+  createPublicClient,
+  custom,
+  http,
+  erc20Abi,
+  parseUnits,
+  formatUnits,
+  type Hex,
+} from 'viem';
+import { arc } from 'viem/chains';
+import { useWallet } from '@/context/WalletContext';
 
-// Tokens supported on Arc Mainnet (USDC is native; EURC is the main swap partner)
-const ARC_TOKENS = ['USDC', 'EURC'] as const;
-type ArcToken = typeof ARC_TOKENS[number];
+// ─── Arc Mainnet constants ────────────────────────────────────────────────────
+const ARC_RPC      = 'https://rpc.mainnet.arc.io';           // arc-studio-allow-onchain-literal
+const ROUTER       = '0x53BF6B0684Ec7eF91e1387Da3D1a1769bC5A6F77' as Hex; // arc-studio-allow-onchain-literal — Uniswap V3 SwapRouter02
 
-type SwapStep = 'idle' | 'estimating' | 'reviewed' | 'swapping' | 'success' | 'error';
+// SwapRouter02 exactInputSingle ABI
+const ROUTER_ABI = [
+  {
+    name: 'exactInputSingle',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [{
+      name: 'params', type: 'tuple',
+      components: [
+        { name: 'tokenIn',           type: 'address' },
+        { name: 'tokenOut',          type: 'address' },
+        { name: 'fee',               type: 'uint24'  },
+        { name: 'recipient',         type: 'address' },
+        { name: 'amountIn',          type: 'uint256' },
+        { name: 'amountOutMinimum',  type: 'uint256' },
+        { name: 'sqrtPriceLimitX96', type: 'uint160' },
+      ],
+    }],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+  },
+] as const;
 
-type ReviewedSwap = {
-  estimate: SwapEstimate;
-  tokenIn: ArcToken;
-  tokenOut: ArcToken;
-  amountIn: string;
+// ─── Token list ───────────────────────────────────────────────────────────────
+const TOKEN_LIST = [
+  { symbol: 'USDC',   address: '0x3600000000000000000000000000000000000000' as Hex, decimals: 6 },  // arc-studio-allow-onchain-literal
+  { symbol: 'EURC',   address: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1' as Hex, decimals: 6 },  // arc-studio-allow-onchain-literal
+  { symbol: 'cirBTC', address: '0x171a4217b86a807a64eb94757db6849fb4bdbaa0' as Hex, decimals: 8 },  // arc-studio-allow-onchain-literal
+] as const;
+
+type TokenSymbol = typeof TOKEN_LIST[number]['symbol'];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Step = 'idle' | 'quoting' | 'quoted' | 'approving' | 'swapping' | 'success' | 'error';
+
+type Quote = {
+  fromToken: string; toToken: string;
+  tokenInAddress: Hex; tokenOutAddress: Hex;
+  inDecimals: number; outDecimals: number;
+  amountIn: string; amountOut: string; minAmountOut: string;
+  fee: number;
 };
 
-const kit = getAppKitInstance();
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(raw: string | bigint, decimals: number, dp = 6): string {
+  const n = typeof raw === 'bigint' ? raw : BigInt(raw);
+  return parseFloat(formatUnits(n, decimals)).toLocaleString(undefined, {
+    minimumFractionDigits: 2, maximumFractionDigits: dp,
+  });
+}
 
+// ─── Token Dropdown ───────────────────────────────────────────────────────────
+function TokenDropdown({
+  value, onChange, exclude, disabled,
+}: {
+  value: TokenSymbol; onChange: (t: TokenSymbol) => void; exclude?: TokenSymbol; disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handle = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  const options = TOKEN_LIST.filter(t => t.symbol !== exclude);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-4 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
+      >
+        <span>{value}</span>
+        <ChevronDown className={`h-4 w-4 text-[#6B7280] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-black/5">
+          {options.map(t => (
+            <button
+              key={t.symbol}
+              type="button"
+              onClick={() => { onChange(t.symbol as TokenSymbol); setOpen(false); }}
+              className={`flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-semibold transition-colors hover:bg-[#F5F6F8] ${value === t.symbol ? 'text-[#6D5DF6]' : 'text-[#1C1C1E]'}`}
+            >
+              <span className="h-5 w-5 rounded-full bg-[#EDEBFF] text-[10px] font-bold text-[#6D5DF6] flex items-center justify-center leading-none">
+                {t.symbol.slice(0, 1)}
+              </span>
+              {t.symbol}
+              {value === t.symbol && <CheckCircle2 className="ml-auto h-4 w-4 text-[#6D5DF6]" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SwapPage() {
-  const { walletProvider, chainId, isConnected, switchToArcMainnet } = useWallet();
+  const { walletProvider, walletAddress, isConnected, switchToArcMainnet, chainId } = useWallet();
 
-  const [tokenIn, setTokenIn] = useState<ArcToken>('EURC');
-  const [tokenOut, setTokenOut] = useState<ArcToken>('USDC');
+  const [tokenIn,  setTokenIn]  = useState<TokenSymbol>('USDC');
+  const [tokenOut, setTokenOut] = useState<TokenSymbol>('EURC');
   const [amountIn, setAmountIn] = useState('');
+  const [step,     setStep]     = useState<Step>('idle');
+  const [quote,    setQuote]    = useState<Quote | null>(null);
+  const [txHash,   setTxHash]   = useState<string | null>(null);
+  const [errMsg,   setErrMsg]   = useState<string | null>(null);
+  const [copied,   setCopied]   = useState(false);
+  const [balanceIn, setBalanceIn] = useState<string | null>(null);
 
-  const [step, setStep] = useState<SwapStep>('idle');
-  const [reviewed, setReviewed] = useState<ReviewedSwap | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
-  const isOnMainnet = isArcMainnetChainId(chainId);
-  const isValid = amountIn.trim() !== '' && parseFloat(amountIn) > 0;
+  const tokenInMeta  = TOKEN_LIST.find(t => t.symbol === tokenIn)!;
+  const tokenOutMeta = TOKEN_LIST.find(t => t.symbol === tokenOut)!;
+  const isOnArc = chainId && (chainId.toLowerCase() === '0x13b2' || chainId === '5042');
+  const busy = step === 'quoting' || step === 'approving' || step === 'swapping';
 
-  // Guard: USDC <-> USDC is a no-op on Arc
-  const isSameAsset = tokenIn === tokenOut;
-
-  const getAdapter = useCallback(async () => {
-    if (!walletProvider?.request) throw new Error('Wallet not connected.');
-    if (!isOnMainnet) {
-      const result = await switchToArcMainnet();
-      if (!result.ok) throw new Error(result.error || 'Failed to switch to Arc Mainnet.');
-    }
-    return await createViemAdapterFromProvider({ provider: walletProvider as Parameters<typeof createViemAdapterFromProvider>[0]['provider'] });
-  }, [walletProvider, isOnMainnet, switchToArcMainnet]);
+  // Fetch balance of tokenIn on Arc Mainnet
+  useEffect(() => {
+    if (!walletAddress || !isConnected) { setBalanceIn(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const pc = createPublicClient({ chain: arc, transport: http(ARC_RPC) }); // arc-studio-allow-onchain-literal
+        const raw = await pc.readContract({
+          address: tokenInMeta.address,
+          abi: erc20Abi,
+          functionName: 'balanceOf',
+          args: [walletAddress as Hex],
+        });
+        if (!cancelled) setBalanceIn(fmt(raw, tokenInMeta.decimals));
+      } catch { if (!cancelled) setBalanceIn('0.00'); }
+    })();
+    return () => { cancelled = true; };
+  }, [walletAddress, isConnected, tokenIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFlip = () => {
     setTokenIn(tokenOut);
     setTokenOut(tokenIn);
-    setReviewed(null);
-    setStep('idle');
-  };
-
-  const handleGetQuote = async () => {
-    if (!isValid || isSameAsset) return;
-    setStep('estimating');
-    setErrorMessage(null);
-    try {
-      const adapter = await getAdapter();
-      const estimate = await kit.estimateSwap({
-        from: { adapter, chain: 'Arc' },
-        tokenIn,
-        tokenOut,
-        amountIn,
-        config: { slippageBps: 300 },
-      });
-      setReviewed({ estimate, tokenIn, tokenOut, amountIn });
-      setStep('reviewed');
-    } catch (err: unknown) {
-      setErrorMessage((err as Error)?.message || 'Could not fetch a quote. Try again.');
-      setStep('error');
-    }
-  };
-
-  const handleSwap = async () => {
-    if (!reviewed) return;
-    if (reviewed.tokenIn !== tokenIn || reviewed.tokenOut !== tokenOut || reviewed.amountIn !== amountIn) {
-      setErrorMessage('Quote is stale. Please get a new quote first.');
-      setStep('error');
-      return;
-    }
-    setStep('swapping');
-    setErrorMessage(null);
-    try {
-      const adapter = await getAdapter();
-      const result = await kit.swap({
-        from: { adapter, chain: 'Arc' },
-        tokenIn: reviewed.tokenIn,
-        tokenOut: reviewed.tokenOut,
-        amountIn: reviewed.amountIn,
-        config: { slippageBps: 300 },
-      });
-      setTxHash((result as { txHash?: string })?.txHash || null);
-      setExplorerUrl((result as { explorerUrl?: string })?.explorerUrl || null);
-      setStep('success');
-    } catch (err: unknown) {
-      setErrorMessage((err as Error)?.message || 'Swap failed. Please try again.');
-      setStep('error');
-    }
-  };
-
-  const handleCopyHash = async () => {
-    if (!txHash) return;
-    await navigator.clipboard.writeText(txHash);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setQuote(null);
+    if (step === 'quoted') setStep('idle');
   };
 
   const handleReset = () => {
-    setStep('idle');
-    setReviewed(null);
-    setTxHash(null);
-    setExplorerUrl(null);
-    setErrorMessage(null);
-    setAmountIn('');
+    setStep('idle'); setQuote(null); setTxHash(null);
+    setErrMsg(null); setAmountIn('');
   };
 
+  // ── Get Quote ───────────────────────────────────────────────────────────────
+  const handleGetQuote = async () => {
+    if (!walletAddress || !amountIn || parseFloat(amountIn) <= 0) return;
+    setStep('quoting'); setErrMsg(null); setQuote(null);
+    try {
+      const res  = await fetch('/api/swap/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromToken: tokenIn, toToken: tokenOut, amount: amountIn, userAddress: walletAddress }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErrMsg(data.error ?? `Quote failed (${res.status}).`); setStep('error'); return; }
+      setQuote(data as Quote);
+      setStep('quoted');
+    } catch { setErrMsg('Network error. Please try again.'); setStep('error'); }
+  };
+
+  // ── Execute Swap ────────────────────────────────────────────────────────────
+  const handleSwap = async () => {
+    if (!quote || !walletProvider?.request || !walletAddress) return;
+    setErrMsg(null);
+
+    try {
+      // 1. Ensure wallet is on Arc Mainnet
+      if (!isOnArc) {
+        setStep('swapping');
+        const result = await switchToArcMainnet();
+        if (!result.ok) { setErrMsg(result.error ?? 'Could not switch to Arc Mainnet.'); setStep('error'); return; }
+      }
+
+      // 2. Get unsigned tx envelope from server
+      setStep('swapping');
+      const execRes = await fetch('/api/swap/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromToken: tokenIn, toToken: tokenOut,
+          amount: amountIn,
+          minAmountOut: quote.minAmountOut,
+          fee: quote.fee,
+          userAddress: walletAddress,
+          outDecimals: quote.outDecimals,
+        }),
+      });
+      const env = await execRes.json();
+      if (!execRes.ok) { setErrMsg(env.error ?? `Execute failed (${execRes.status}).`); setStep('error'); return; }
+
+      const account = walletAddress as Hex;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const walletClient = createWalletClient({ chain: arc, transport: custom(walletProvider as any), account });
+      const publicClient = createPublicClient({ chain: arc, transport: http(ARC_RPC) }); // arc-studio-allow-onchain-literal
+
+      // 3. Check allowance → approve if needed
+      const amountInBig = BigInt(quote.amountIn);
+      const allowance = await publicClient.readContract({
+        address: quote.tokenInAddress,
+        abi: erc20Abi,
+        functionName: 'allowance',
+        args: [account, ROUTER],
+      });
+
+      if (allowance < amountInBig) {
+        setStep('approving');
+        const approveHash = await walletClient.writeContract({
+          address: quote.tokenInAddress,
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [ROUTER, amountInBig],
+          account,
+          maxFeePerGas: parseUnits('20', 9), // Arc minimum 20 gwei
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        setStep('swapping');
+      }
+
+      // 4. Execute swap on Arc via SwapRouter02.exactInputSingle
+      const swapHash = await walletClient.writeContract({
+        address: ROUTER,
+        abi: ROUTER_ABI,
+        functionName: 'exactInputSingle',
+        args: [{
+          tokenIn:           quote.tokenInAddress,
+          tokenOut:          quote.tokenOutAddress,
+          fee:               quote.fee,
+          recipient:         account,
+          amountIn:          amountInBig,
+          amountOutMinimum:  BigInt(quote.minAmountOut),
+          sqrtPriceLimitX96: BigInt(0),
+        }],
+        account,
+        maxFeePerGas: parseUnits('20', 9), // Arc minimum 20 gwei
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash: swapHash });
+      setTxHash(swapHash);
+      setStep('success');
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? 'Swap failed.';
+      setErrMsg(
+        msg.includes('User rejected') || msg.includes('user rejected')
+          ? 'Transaction rejected in wallet.'
+          : msg,
+      );
+      setStep('error');
+    }
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
-      <div className="mx-auto flex max-w-lg flex-col gap-6 py-4">
+    <div className="min-h-dvh bg-[#F0F1F5] px-4 py-8 pb-28" suppressHydrationWarning>
+      <div className="mx-auto flex max-w-md flex-col gap-6">
 
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Swap Tokens</h1>
-          <p className="mt-2 text-sm text-[#6B7280]">Convert assets on Arc Mainnet.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+            Swap Tokens
+          </h1>
+          <p className="mt-2 text-[#6B7280]">Convert assets before sending.</p>
         </div>
 
-        {/* Mainnet warning banner */}
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>You are on <strong>Arc Mainnet</strong>. Swaps involve real funds and are irreversible. Start with small amounts.</span>
-        </div>
+        {/* Success screen */}
+        {step === 'success' && (
+          <div className="rounded-3xl bg-white p-6 shadow-sm text-center space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
+              <CheckCircle2 className="h-7 w-7 text-green-500" />
+            </div>
+            <p className="text-lg font-semibold text-[#111827]">Swap complete</p>
+            {txHash && (
+              <div className="rounded-2xl bg-[#F5F6F8] px-4 py-3 text-xs font-mono text-[#6B7280] break-all">
+                {txHash}
+              </div>
+            )}
+            <div className="flex gap-3">
+              {txHash && (
+                <>
+                  <a
+                    href={`https://explorer.arc.io/tx/${txHash}`}
+                    target="_blank" rel="noreferrer"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#EDEBFF] px-4 py-3 text-sm font-semibold text-[#6D5DF6]"
+                  >
+                    <ExternalLink className="h-4 w-4" /> View on Explorer
+                  </a>
+                  <button
+                    onClick={async () => { await navigator.clipboard.writeText(txHash); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-[#E5E7EB] px-4 py-3 text-sm font-semibold text-[#1C1C1E]"
+                  >
+                    <Copy className="h-4 w-4" /> {copied ? 'Copied' : 'Copy hash'}
+                  </button>
+                </>
+              )}
+            </div>
+            <button onClick={handleReset} className="w-full rounded-2xl bg-[#6D5DF6] py-3.5 text-sm font-semibold text-white">
+              New Swap
+            </button>
+          </div>
+        )}
 
-        {/* Aggregator disclosure */}
-        <div className="flex items-start gap-3 rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-xs text-[#6B7280]">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>Swaps are routed through third-party DEX aggregators (currently LiFi). Routes and aggregators may vary. By swapping you agree to the aggregator&apos;s terms of service.</span>
-        </div>
-
-        {/* Swap Card */}
+        {/* Main swap card */}
         {step !== 'success' && (
-          <Card className="p-6">
-            {/* Pay */}
+          <div className="rounded-3xl bg-white p-6 shadow-sm space-y-1">
+
+            {/* You Pay */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[#6B7280]">You Pay</label>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[#6B7280]">You Pay</span>
+                {isConnected && balanceIn !== null && (
+                  <button
+                    className="text-xs text-[#6D5DF6] font-semibold"
+                    onClick={() => setAmountIn(balanceIn.replace(/,/g, ''))}
+                  >
+                    Balance: {balanceIn} · Max
+                  </button>
+                )}
+              </div>
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                inputMode="decimal"
                 placeholder="0.00"
                 value={amountIn}
-                onChange={(e) => { setAmountIn(e.target.value); setReviewed(null); setStep('idle'); }}
-                disabled={step === 'swapping'}
-                className="w-full rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] px-4 py-3 text-2xl font-bold text-[#1C1C1E] outline-none transition-all focus:border-[#6D5DF6] disabled:opacity-50"
+                disabled={busy}
+                onChange={e => {
+                  const v = e.target.value.replace(/[^0-9.]/g, '');
+                  if (v === '' || /^\d*\.?\d*$/.test(v)) {
+                    setAmountIn(v);
+                    setQuote(null);
+                    if (step === 'quoted') setStep('idle');
+                  }
+                }}
+                className="w-full bg-transparent text-5xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+                style={{ letterSpacing: '-0.02em' }}
               />
-              <div className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2">
-                {ARC_TOKENS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => { setTokenIn(t); setReviewed(null); setStep('idle'); }}
-                    disabled={step === 'swapping'}
-                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${tokenIn === t ? 'bg-[#6D5DF6] text-white shadow' : 'text-[#6B7280] hover:bg-[#EDEBFF] hover:text-[#6D5DF6]'}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
+              <TokenDropdown value={tokenIn} onChange={v => { setTokenIn(v); setQuote(null); setStep('idle'); }} exclude={tokenOut} disabled={busy} />
             </div>
 
-            {/* Flip button */}
-            <div className="my-4 flex justify-center">
+            {/* Flip arrow */}
+            <div className="flex justify-center py-2">
               <button
                 onClick={handleFlip}
-                disabled={step === 'swapping'}
-                className="rounded-full border border-[#E5E7EB] bg-[#F5F6F8] p-3 transition-all hover:bg-[#EDEBFF] hover:text-[#6D5DF6] disabled:opacity-40"
+                disabled={busy}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F0F1F5] text-[#6D5DF6] transition-colors hover:bg-[#EDEBFF] disabled:opacity-40"
               >
                 <ArrowDown className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Receive */}
+            {/* You Receive */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[#6B7280]">You Receive</label>
-              <div className="w-full rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] px-4 py-3 text-2xl font-bold text-[#1C1C1E]">
-                {step === 'reviewed' && reviewed
-                  ? reviewed.estimate.estimatedOutput?.amount ?? '—'
-                  : '—'}
+              <span className="text-sm font-medium text-[#6B7280]">You Receive</span>
+              <div className="text-5xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+                {quote ? fmt(quote.amountOut, quote.outDecimals) : '0.00'}
               </div>
-              <div className="flex items-center gap-2 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2">
-                {ARC_TOKENS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => { setTokenOut(t); setReviewed(null); setStep('idle'); }}
-                    disabled={step === 'swapping'}
-                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${tokenOut === t ? 'bg-[#6D5DF6] text-white shadow' : 'text-[#6B7280] hover:bg-[#EDEBFF] hover:text-[#6D5DF6]'}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
+              <TokenDropdown value={tokenOut} onChange={v => { setTokenOut(v); setQuote(null); setStep('idle'); }} exclude={tokenIn} disabled={busy} />
             </div>
-
-            {isSameAsset && (
-              <p className="mt-3 text-xs text-[#D64545]">Select two different tokens to swap.</p>
-            )}
 
             {/* Quote details */}
-            {step === 'reviewed' && reviewed && (
-              <div className="mt-4 rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 text-sm space-y-1 text-[#6B7280]">
+            {quote && (
+              <div className="mt-4 rounded-2xl bg-[#F9FAFB] px-4 py-3 space-y-1.5 text-xs text-[#6B7280]">
                 <div className="flex justify-between">
                   <span>Estimated output</span>
-                  <span className="font-semibold text-[#1C1C1E]">
-                    {reviewed.estimate.estimatedOutput?.amount} {reviewed.estimate.estimatedOutput?.token}
-                  </span>
+                  <span className="font-semibold text-[#111827]">{fmt(quote.amountOut, quote.outDecimals)} {tokenOut}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Slippage tolerance</span>
-                  <span className="font-semibold text-[#1C1C1E]">3%</span>
+                  <span>Minimum received (0.5% slippage)</span>
+                  <span className="font-semibold text-[#111827]">{fmt(quote.minAmountOut, quote.outDecimals)} {tokenOut}</span>
                 </div>
-                {reviewed.estimate.fees?.map((fee, i) => (
-                  <div key={i} className="flex justify-between">
-                    <span>{fee.type} fee</span>
-                    <span className="font-semibold text-[#1C1C1E]">{fee.amount} {fee.token}</span>
-                  </div>
-                ))}
+                <div className="flex justify-between">
+                  <span>Fee tier</span>
+                  <span className="font-semibold text-[#111827]">{(quote.fee / 10000).toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Route</span>
+                  <span className="font-semibold text-[#111827]">Uniswap V3 · Arc Mainnet</span>
+                </div>
               </div>
             )}
-          </Card>
-        )}
-
-        {/* Success card */}
-        {step === 'success' && (
-          <Card className="p-6 text-center space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF4FF] text-[#4DA3FF]">
-              <CheckCircle2 className="h-8 w-8" />
-            </div>
-            <div className="text-xl font-semibold text-[#1C1C1E]">Swap complete</div>
-            {txHash && (
-              <div className="rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-3 text-xs text-[#6B7280] break-all">{txHash}</div>
-            )}
-            <div className="flex flex-col gap-3 sm:flex-row">
-              {explorerUrl && (
-                <a href={explorerUrl} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#EDEBFF] px-4 py-3 text-sm font-semibold text-[#6D5DF6]">
-                  <ExternalLink className="h-4 w-4" />
-                  View on Explorer
-                </a>
-              )}
-              {txHash && (
-                <button onClick={handleCopyHash} className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#1C1C1E]">
-                  <Copy className="h-4 w-4" />
-                  {copied ? 'Copied' : 'Copy Hash'}
-                </button>
-              )}
-            </div>
-            <Button className="w-full" onClick={handleReset}>New Swap</Button>
-          </Card>
+          </div>
         )}
 
         {/* Error */}
-        {step === 'error' && errorMessage && (
-          <div className="flex items-start gap-3 rounded-2xl border border-[#F9D7D7] bg-[#FDECEC] p-4 text-sm text-[#6B1F1F]">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+        {step === 'error' && errMsg && (
+          <div className="flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="flex-1">
-              <p>{errorMessage}</p>
-              <button onClick={handleReset} className="mt-2 font-semibold underline">Try again</button>
+              <p>{errMsg}</p>
+              <button onClick={handleReset} className="mt-1 font-semibold underline">Try again</button>
             </div>
           </div>
         )}
 
-        {/* Not connected */}
-        {!isConnected && (
-          <p className="text-center text-sm text-[#6B7280]">Connect your wallet to swap.</p>
+        {/* Network warning */}
+        {isConnected && !isOnArc && step !== 'success' && (
+          <div className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>Switch to Arc Mainnet to swap</span>
+            <button onClick={() => switchToArcMainnet()} className="ml-3 shrink-0 font-semibold underline">Switch</button>
+          </div>
         )}
 
-        {/* Actions */}
-        {step !== 'success' && isConnected && (
-          <div className="flex flex-col gap-3">
-            {step !== 'reviewed' && (
-              <Button
-                className="w-full"
-                onClick={handleGetQuote}
-                disabled={!isValid || isSameAsset || step === 'estimating' || step === 'swapping'}
+        {/* CTA */}
+        {step !== 'success' && (
+          <div className="space-y-3">
+            {!isConnected ? (
+              <button
+                onClick={() => switchToArcMainnet()}
+                className="w-full rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm"
               >
-                {step === 'estimating' ? 'Getting quote…' : 'Get Quote'}
-              </Button>
-            )}
-            {step === 'reviewed' && reviewed && (
-              <Button
-                className="w-full"
-                onClick={handleSwap}
-                disabled={step === 'swapping'}
-              >
-                {step === 'swapping' ? 'Swapping…' : `Swap ${reviewed.amountIn} ${reviewed.tokenIn} → ${reviewed.tokenOut}`}
-              </Button>
-            )}
-            {step === 'reviewed' && (
-              <button onClick={handleReset} className="text-sm text-[#6B7280] underline text-center">
-                Edit swap
+                Connect Wallet
               </button>
+            ) : !quote ? (
+              <button
+                onClick={handleGetQuote}
+                disabled={!amountIn || parseFloat(amountIn) <= 0 || tokenIn === tokenOut || step === 'quoting'}
+                className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm disabled:opacity-40"
+              >
+                {step === 'quoting' ? <><Loader2 className="h-4 w-4 animate-spin" /> Getting quote…</> : 'Get Quote'}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSwap}
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm disabled:opacity-40"
+                >
+                  {step === 'approving' ? <><Loader2 className="h-4 w-4 animate-spin" /> Approving…</>
+                   : step === 'swapping' ? <><Loader2 className="h-4 w-4 animate-spin" /> Swapping…</>
+                   : `Swap ${amountIn} ${tokenIn} → ${tokenOut}`}
+                </button>
+                {!busy && (
+                  <button onClick={() => { setQuote(null); setStep('idle'); }} className="w-full text-center text-sm text-[#6B7280] underline">
+                    Edit / get new quote
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
 
-        {/* Info footer */}
-        <Card className="bg-gradient-to-br from-[#EDEBFF] to-[#EAF4FF] border-none p-5">
-          <div className="flex items-center gap-2 text-base font-semibold text-[#2F2A6B]">
-            <ArrowLeftRight className="h-4 w-4" />
-            Arc Mainnet Swaps
-          </div>
-          <p className="mt-2 text-sm text-[#2F2A6B] leading-relaxed">
-            Swap USDC and EURC natively on Arc. USDC is the native gas token — one balance, used for both fees and transfers.
+        {/* Info */}
+        {step !== 'success' && (
+          <p className="text-center text-xs text-[#9CA3AF]">
+            Swaps execute on Arc Mainnet via Uniswap V3. Real funds — transactions are irreversible.
           </p>
-        </Card>
+        )}
 
       </div>
     </div>

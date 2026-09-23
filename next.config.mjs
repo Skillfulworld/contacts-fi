@@ -1,18 +1,32 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV !== 'production';
+
 const nextConfig = {
-  // Standalone output bundles everything needed for a self-contained deployment
-  // on Vercel, Netlify, Railway, Fly.io, or any Docker/Node host.
-  output: 'standalone',
+  // standalone only for production builds — interferes with dev HMR
+  ...(isDev ? {} : { output: 'standalone' }),
 
   eslint: {
-    // Lint errors do not block production builds — run lint separately in CI.
     ignoreDuringBuilds: true,
   },
 
-  // Allow next/image to serve branding assets without explicit domain config.
   images: {
     unoptimized: false,
   },
+
+  // Force no-cache headers on all JS/CSS chunks so the browser never
+  // serves a stale bundle after a code change.
+  async headers() {
+    return [
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
+        ],
+      },
+    ];
+  },
+
+
 };
 
 export default nextConfig;
