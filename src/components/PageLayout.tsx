@@ -43,8 +43,8 @@ export default function PageLayout({ children, brandSide, swapMode }: PageLayout
       {/* Mobile single column */}
       <div className="lg:hidden">
         {children}
-        {/* Brand text below the functional area on mobile — no box, gradient fades naturally */}
-        <div className="px-6 pb-32 pt-8">
+        {/* Brand text below — matches page bg so no visible box; orbs create soft ambient color */}
+        <div className="h-64 w-full">
           <PageBrandPanel swapMode={swapMode} />
         </div>
       </div>

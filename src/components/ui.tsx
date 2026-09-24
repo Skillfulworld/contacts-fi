@@ -21,9 +21,10 @@ import { getChainDisplayName, isArcMainnetChainId, useWallet } from '@/context/W
 
 // ─── Page brand copy per route ─────────────────────────────────────────────────
 const PAGE_COPY: Record<string, { eyebrow: string; heading: string; tagline: string; side: 'left' | 'right' }> = {
-  '/contacts':    { eyebrow: 'YOUR PEOPLE',   heading: 'Money, connected.',          tagline: 'Keep the people and wallets you pay most, all in one place.',                   side: 'left'  },
+  '/contacts':    { eyebrow: 'Contacts',        heading: 'Money, connected.',          tagline: 'Keep the people and wallets you pay most, all in one place.',                   side: 'left'  },
   '/send':        { eyebrow: 'SEND USDC',     heading: 'Send it simply.',             tagline: 'Choose a contact, choose a wallet, and send USDC directly.',                   side: 'right' },
-  '/swap':        { eyebrow: 'SWAP ASSETS',       heading: 'Change what you hold.',       tagline: 'Swap supported assets without leaving Settle Exchange.',                        side: 'left'  },
+  '/swap':        { eyebrow: 'SWAP ASSETS',        heading: 'Change what you hold.',       tagline: 'Swap supported assets without leaving Settle Exchange.',                        side: 'left'  },
+  '/swap/bridge': { eyebrow: 'Bridge',             heading: 'Move money further.',          tagline: 'Send to any chain in seconds with CCTP fast transfer.',                          side: 'left'  },
   '/transactions':{ eyebrow: 'YOUR ACTIVITY',     heading: 'Every move, accounted for.', tagline: 'See your payments, swaps and transfers in one clear history.',                  side: 'right' },
   '/settings':    { eyebrow: 'YOUR SETTLE EXCHANGE', heading: 'Everything, your way.',   tagline: 'Manage your profile, preferences and Settle Exchange experience.',              side: 'left'  },
 };
@@ -76,17 +77,14 @@ export const PageBrandPanel = ({ swapMode }: { swapMode?: 'swap' | 'bridge' }) =
   const orbs = PANEL_ORBS[key] ?? PANEL_ORBS['/contacts'];
 
   return (
-    <div className="relative flex h-full w-full flex-col justify-center overflow-hidden px-12 lg:bg-[#F5F6F8]">
+    <div className="relative flex h-full w-full flex-col justify-center overflow-hidden bg-[#F5F6F8] px-12">
 
-      {/* Gradient orbs — on desktop: full-bleed from bottom-left corner fading toward app edge.
-          On mobile: soft ambient color behind the text, no hard background. */}
-      <div className={`pointer-events-none absolute -bottom-32 -left-32 h-[520px] w-[520px] rounded-full ${orbs.a} opacity-25 blur-[110px]`} />
-      <div className={`pointer-events-none absolute bottom-1/4 -left-20 h-[360px] w-[360px] rounded-full ${orbs.b} opacity-18 blur-[90px]`} />
-      <div className={`pointer-events-none absolute -top-16 left-1/4 h-[280px] w-[280px] rounded-full ${orbs.c} opacity-12 blur-[80px]`} />
-      {/* Desktop only: fade toward the app column */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-2/3 bg-gradient-to-l from-[#F5F6F8] via-[#F5F6F8]/70 to-transparent lg:block" />
-      {/* Mobile only: fade upward into the page background above */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#F5F6F8] to-transparent lg:hidden" />
+      {/* Gradient orbs — full-bleed from bottom-left, fade toward the app edge */}
+      <div className={`pointer-events-none absolute -bottom-32 -left-32 h-[520px] w-[520px] rounded-full ${orbs.a} opacity-30 blur-[110px]`} />
+      <div className={`pointer-events-none absolute bottom-1/4 -left-20 h-[360px] w-[360px] rounded-full ${orbs.b} opacity-20 blur-[90px]`} />
+      <div className={`pointer-events-none absolute -top-16 left-1/4 h-[280px] w-[280px] rounded-full ${orbs.c} opacity-15 blur-[80px]`} />
+      {/* Fade-to-page-color overlay — wipes color out toward the app/right edge */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-gradient-to-l from-[#F5F6F8] via-[#F5F6F8]/70 to-transparent" />
 
       {/* Text — free, not in a card, vertically centered, generous size */}
       <div className="relative z-10 max-w-sm">
