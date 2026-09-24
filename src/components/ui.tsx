@@ -45,9 +45,9 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
 export const BrandLogo = () => (
   <Link href="/" className="flex items-center gap-2 font-semibold text-[#1C1C1E] hover:text-[#6D5DF6] transition-colors">
     <div className="flex h-6 w-6 items-center justify-center rounded-md overflow-hidden">
-      <Image src="/branding/contactfi-icon.png" alt="ContactFi Icon" width={24} height={24} className="h-full w-full object-contain" />
+      <Image src="/branding/settlex-mark-512.svg" alt="SettleX Icon" width={24} height={24} className="h-full w-full object-contain" />
     </div>
-    <Image src="/branding/contactfi-wordmark.png" alt="ContactFi" width={84} height={16} className="h-4 w-auto object-contain" priority />
+    <Image src="/branding/settlex-logo.svg" alt="SettleX" width={84} height={16} className="h-4 w-auto object-contain" priority />
   </Link>
 );
 

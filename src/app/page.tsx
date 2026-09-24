@@ -23,7 +23,7 @@ export default function LandingPage() {
               <span className="text-xs font-medium text-[#6D5DF6]">Powered by Arc</span>
             </div>
             <div className="relative w-[180px] h-[36px] overflow-hidden">
-                <Image src="/branding/contactfi-wordmark.png" alt="ContactFi" fill className="object-contain object-left" />
+                <Image src="/branding/settlex-website-header-black.svg" alt="SettleX" fill className="object-contain object-left" />
             </div>
         </div>
       </header>
@@ -89,7 +89,7 @@ export default function LandingPage() {
             </div>
             <div className="p-12 rounded-[32px] border border-[#E5E7EB] bg-gradient-to-b from-white to-[#F3EBFF] shadow-sm text-center">
                 <h2 className="text-sm font-semibold text-[#6D5DF6] mb-2 uppercase tracking-widest">Solution</h2>
-                <p className="text-3xl font-semibold mb-2">ContactFi fixes that.</p>
+                <p className="text-3xl font-semibold mb-2">SettleX fixes that.</p>
                 <p className="text-[#6B7280]">Send USDC to anyone with a wallet.</p>
             </div>
         </div>

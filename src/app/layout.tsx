@@ -3,8 +3,8 @@ import "./globals.css";
 import RootLayoutContent from "./RootLayoutContent";
 
 export const metadata: Metadata = {
-  title: "Contacts-Fi",
-  description: "Crypto contacts for the Arc Network",
+  title: "SettleX",
+  description: "Send USDC to anyone on Arc Network. Swap, bridge, and manage your crypto contacts.",
 };
 
 export default function RootLayout({
