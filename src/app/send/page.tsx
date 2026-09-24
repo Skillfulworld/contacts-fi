@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useContacts } from '@/context/ContactContext';
 import { Avatar, SearchBar, Button, Input } from '@/components/ui';
+import PageLayout from '@/components/PageLayout';
 import { SendFlow } from '@/components/SendFlow';
 import { User, ClipboardPaste } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export default function SendPage() {
   };
 
   return (
+    <PageLayout brandSide="right">
     <div className="p-4">
       <h1 className="text-2xl font-semibold mb-6">Send USDC</h1>
 
@@ -65,5 +67,6 @@ export default function SendPage() {
         />
       )}
     </div>
+    </PageLayout>
   );
 }

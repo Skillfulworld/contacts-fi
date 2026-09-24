@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useContacts } from '@/context/ContactContext';
 import { Avatar, SearchBar, FAB } from '@/components/ui';
+import PageLayout from '@/components/PageLayout';
 import Link from 'next/link';
 import { Contact2, SearchX } from 'lucide-react';
 
@@ -21,6 +22,7 @@ export default function ContactsListPage() {
   }, {} as Record<string, any[]>);
 
   return (
+    <PageLayout brandSide="left">
     <div className="pb-32">
       <div className="bg-[var(--md-sys-color-background)] px-4 pb-3 pt-4">
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -66,5 +68,6 @@ export default function ContactsListPage() {
 
       <FAB href="/contacts/add" />
     </div>
+    </PageLayout>
   );
 }

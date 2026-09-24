@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useEffect, useRef, useState } from 'react';
+
 import {
   Search,
   User,
@@ -17,6 +18,15 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { getChainDisplayName, isArcMainnetChainId, useWallet } from '@/context/WalletContext';
+
+// ─── Page brand copy per route ─────────────────────────────────────────────────
+const PAGE_COPY: Record<string, { eyebrow: string; heading: string; tagline: string; side: 'left' | 'right' }> = {
+  '/contacts':    { eyebrow: 'YOUR PEOPLE',   heading: 'Money, connected.',          tagline: 'Keep the people and wallets you pay most, all in one place.',                   side: 'left'  },
+  '/send':        { eyebrow: 'SEND USDC',     heading: 'Send it simply.',             tagline: 'Choose a contact, choose a wallet, and send USDC directly.',                   side: 'right' },
+  '/swap':        { eyebrow: 'SWAP ASSETS',   heading: 'Change what you hold.',       tagline: 'Swap supported assets without leaving SettleX.',                               side: 'left'  },
+  '/transactions':{ eyebrow: 'YOUR ACTIVITY', heading: 'Every move, accounted for.', tagline: 'See your payments, swaps and transfers in one clear history.',                  side: 'right' },
+  '/settings':    { eyebrow: 'YOUR SETTLEX',  heading: 'Everything, your way.',       tagline: 'Manage your profile, preferences and SettleX experience.',                     side: 'left'  },
+};
 
 // --- Avatar ---
 export const Avatar = ({ initials, color, size = 'md' }: { initials: string; color?: string; size?: 'sm' | 'md' | 'lg' | 'xl' }) => {
@@ -43,13 +53,41 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
 
 // --- BrandLogo ---
 export const BrandLogo = () => (
-  <Link href="/" className="flex items-center gap-2 font-semibold text-[#1C1C1E] hover:text-[#6D5DF6] transition-colors">
-    <div className="flex h-6 w-6 items-center justify-center rounded-md overflow-hidden">
-      <Image src="/branding/settlex-mark-512.svg" alt="SettleX Icon" width={24} height={24} className="h-full w-full object-contain" unoptimized />
-    </div>
-    <Image src="/branding/settlex-logo.svg" alt="SettleX" width={84} height={16} className="h-4 w-auto object-contain" priority unoptimized />
+  <Link href="/" className="flex items-center font-semibold text-[#1C1C1E] hover:text-[#6D5DF6] transition-colors">
+    <Image src="/branding/settlex-website-header-black.svg" alt="SettleX" width={120} height={28} className="h-7 w-auto object-contain" priority unoptimized />
   </Link>
 );
+
+// --- PageBrandPanel ---
+export const PageBrandPanel = ({ swapMode }: { swapMode?: 'swap' | 'bridge' }) => {
+  const pathname = usePathname();
+  const key = swapMode === 'bridge' ? '/swap/bridge' : pathname;
+  const copy = PAGE_COPY[key] ?? PAGE_COPY['/contacts'];
+
+  // Gradient configs per route
+  const gradients: Record<string, string> = {
+    '/contacts':    'from-[#6D5DF6]/20 via-[#4DA3FF]/15 to-transparent',
+    '/send':        'from-[#FF7A59]/20 via-[#FFD166]/15 to-transparent',
+    '/swap':        'from-[#4DA3FF]/20 via-[#6D5DF6]/15 to-transparent',
+    '/swap/bridge': 'from-[#22C55E]/15 via-[#4DA3FF]/15 to-transparent',
+    '/transactions':'from-[#6D5DF6]/15 via-[#4DA3FF]/10 to-transparent',
+    '/settings':    'from-[#FF7A59]/15 via-[#6D5DF6]/15 to-transparent',
+  };
+  const gradient = gradients[key] ?? gradients['/contacts'];
+
+  return (
+    <div className={`relative flex flex-col justify-center px-10 py-12 overflow-hidden bg-gradient-to-br ${gradient} bg-[#F5F6F8]`}>
+      {/* Soft atmospheric orb */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#6D5DF6]/10 blur-[80px]" />
+      <div className="pointer-events-none absolute -bottom-16 right-0 h-64 w-64 rounded-full bg-[#4DA3FF]/10 blur-[60px]" />
+      <div className="relative z-10 max-w-xs">
+        <p className="mb-4 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#6D5DF6]">{copy.eyebrow}</p>
+        <h2 className="mb-4 font-[var(--font-display,_Space_Grotesk,_sans-serif)] text-4xl font-bold leading-[1.1] tracking-[-0.03em] text-[#1C1C1E] text-balance">{copy.heading}</h2>
+        <p className="text-base leading-relaxed text-[#6B7280] text-pretty">{copy.tagline}</p>
+      </div>
+    </div>
+  );
+};
 
 // --- WalletHeader ---
 export const WalletHeader = () => {
@@ -151,6 +189,34 @@ export const WalletHeader = () => {
     >
       {isConnecting ? 'Connecting...' : 'Connect Wallet'}
     </button>
+  );
+};
+
+// --- DesktopTopNav ---
+export const DesktopTopNav = () => {
+  const pathname = usePathname();
+  const links = [
+    { href: '/contacts',     label: 'Contacts' },
+    { href: '/send',         label: 'Send'     },
+    { href: '/swap',         label: 'Swap'     },
+    { href: '/transactions', label: 'Activity' },
+    { href: '/settings',     label: 'Settings' },
+  ];
+  return (
+    <header className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-[#E5E7EB] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <BrandLogo />
+      <nav className="flex items-center gap-1">
+        {links.map(({ href, label }) => {
+          const isActive = pathname === href || (href === '/swap' && pathname.startsWith('/swap'));
+          return (
+            <Link key={href} href={href} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${isActive ? 'bg-[#EDEBFF] text-[#6D5DF6]' : 'text-[#6B7280] hover:text-[#1C1C1E] hover:bg-[#F5F6F8]'}`}>
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+      <WalletHeader />
+    </header>
   );
 };
 
@@ -292,7 +358,7 @@ export const BottomNavigation = () => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#334155] bg-[#1E293B] px-4 py-2 shadow-[0_-10px_24px_rgba(15,23,42,0.24)] backdrop-blur">
+    <div className="lg:hidden fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#334155] bg-[#1E293B] px-4 py-2 shadow-[0_-10px_24px_rgba(15,23,42,0.24)] backdrop-blur">
       {links.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href;
         return (

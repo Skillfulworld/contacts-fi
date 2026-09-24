@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useContacts } from '@/context/ContactContext';
 import { TransactionCard } from '@/components/ui';
+import PageLayout from '@/components/PageLayout';
 import { Search, ReceiptText, FileDown } from 'lucide-react';
 
 export default function TransactionsHistoryPage() {
@@ -24,7 +25,8 @@ export default function TransactionsHistoryPage() {
   const filters = ['All', 'Sent', 'Received', 'Failed'];
 
   return (
-    <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
+    <PageLayout brandSide="right">
+    <div className="bg-[var(--md-sys-color-background)] p-4 pb-24">
       <div className="flex items-center justify-between py-6">
         <div>
           <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Activity</h1>
@@ -77,5 +79,6 @@ export default function TransactionsHistoryPage() {
         </button>
       </div>
     </div>
+    </PageLayout>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import BridgePanel from '@/components/BridgePanel';
+import PageLayout from '@/components/PageLayout';
 import { ArrowDown, ChevronDown, CheckCircle2, ExternalLink, Copy, AlertCircle, Loader2 } from 'lucide-react';
 import {
   createWalletClient,
@@ -282,20 +283,11 @@ export default function SwapPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-dvh bg-[#F0F1F5] px-4 py-8 pb-28" suppressHydrationWarning>
+    <PageLayout brandSide="left" swapMode={mode}>
+    <div className="bg-[#F0F1F5] px-4 py-6 pb-28" suppressHydrationWarning>
       <div className="mx-auto flex max-w-md flex-col gap-6">
 
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
-            {mode === 'swap' ? 'Swap Tokens' : 'Bridge USDC'}
-          </h1>
-          <p className="mt-2 text-[#6B7280]">
-            {mode === 'swap' ? 'Convert assets before sending.' : 'Move USDC across chains.'}
-          </p>
-        </div>
-
-        {/* Swap / Bridge toggle */}
+        {/* Swap / Bridge toggle — at the very top so visible without scrolling on mobile */}
         <div className="flex rounded-2xl bg-white p-1 shadow-sm">
           <button
             onClick={() => setMode('swap')}
@@ -511,5 +503,6 @@ export default function SwapPage() {
 
       </div>
     </div>
+    </PageLayout>
   );
 }

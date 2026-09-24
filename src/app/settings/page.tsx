@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Card, SectionHeader, Avatar } from '@/components/ui';
+import PageLayout from '@/components/PageLayout';
 import {
   Moon,
   Bell,
@@ -37,7 +38,8 @@ export default function SettingsPage() {
   }, [walletAddress]);
 
   return (
-    <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
+    <PageLayout brandSide="left">
+    <div className="bg-[var(--md-sys-color-background)] p-4 pb-24">
       <div className="py-6">
         <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Settings</h1>
       </div>
@@ -81,6 +83,7 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+    </PageLayout>
   );
 }
 
