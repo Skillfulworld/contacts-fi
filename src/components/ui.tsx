@@ -59,31 +59,40 @@ export const BrandLogo = () => (
 );
 
 // --- PageBrandPanel ---
+// Per-page orb color configs — matches the reference image palette (soft blue, coral/pink, lavender, teal)
+const PANEL_ORBS: Record<string, { a: string; b: string; c: string; accent: string }> = {
+  '/contacts':     { a: 'bg-[#7B6EF6]',   b: 'bg-[#60B8FF]',   c: 'bg-[#A78BFA]',   accent: '#7B6EF6' },
+  '/send':         { a: 'bg-[#FF8FA3]',   b: 'bg-[#FFB347]',   c: 'bg-[#FF6B9D]',   accent: '#FF6B9D' },
+  '/swap':         { a: 'bg-[#60B8FF]',   b: 'bg-[#7B6EF6]',   c: 'bg-[#38BDF8]',   accent: '#60B8FF' },
+  '/swap/bridge':  { a: 'bg-[#34D399]',   b: 'bg-[#60B8FF]',   c: 'bg-[#6EE7B7]',   accent: '#34D399' },
+  '/transactions': { a: 'bg-[#A78BFA]',   b: 'bg-[#60B8FF]',   c: 'bg-[#7B6EF6]',   accent: '#A78BFA' },
+  '/settings':     { a: 'bg-[#FF8FA3]',   b: 'bg-[#A78BFA]',   c: 'bg-[#7B6EF6]',   accent: '#A78BFA' },
+};
+
 export const PageBrandPanel = ({ swapMode }: { swapMode?: 'swap' | 'bridge' }) => {
   const pathname = usePathname();
   const key = swapMode === 'bridge' ? '/swap/bridge' : pathname;
   const copy = PAGE_COPY[key] ?? PAGE_COPY['/contacts'];
-
-  // Gradient configs per route
-  const gradients: Record<string, string> = {
-    '/contacts':    'from-[#6D5DF6]/20 via-[#4DA3FF]/15 to-transparent',
-    '/send':        'from-[#FF7A59]/20 via-[#FFD166]/15 to-transparent',
-    '/swap':        'from-[#4DA3FF]/20 via-[#6D5DF6]/15 to-transparent',
-    '/swap/bridge': 'from-[#22C55E]/15 via-[#4DA3FF]/15 to-transparent',
-    '/transactions':'from-[#6D5DF6]/15 via-[#4DA3FF]/10 to-transparent',
-    '/settings':    'from-[#FF7A59]/15 via-[#6D5DF6]/15 to-transparent',
-  };
-  const gradient = gradients[key] ?? gradients['/contacts'];
+  const orbs = PANEL_ORBS[key] ?? PANEL_ORBS['/contacts'];
 
   return (
-    <div className={`relative flex flex-col justify-center px-10 py-12 overflow-hidden bg-gradient-to-br ${gradient} bg-[#F5F6F8]`}>
-      {/* Soft atmospheric orb */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#6D5DF6]/10 blur-[80px]" />
-      <div className="pointer-events-none absolute -bottom-16 right-0 h-64 w-64 rounded-full bg-[#4DA3FF]/10 blur-[60px]" />
-      <div className="relative z-10 max-w-xs">
-        <p className="mb-4 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#6D5DF6]">{copy.eyebrow}</p>
-        <h2 className="mb-4 font-[var(--font-display,_Space_Grotesk,_sans-serif)] text-4xl font-bold leading-[1.1] tracking-[-0.03em] text-[#1C1C1E] text-balance">{copy.heading}</h2>
-        <p className="text-base leading-relaxed text-[#6B7280] text-pretty">{copy.tagline}</p>
+    <div className="relative flex h-full w-full flex-col justify-center overflow-hidden bg-[#F5F6F8] px-12">
+
+      {/* Full-bleed gradient orbs — sit in the far corner, fade toward the app edge */}
+      {/* Primary large orb — bottom-left corner */}
+      <div className={`pointer-events-none absolute -bottom-32 -left-32 h-[520px] w-[520px] rounded-full ${orbs.a} opacity-30 blur-[110px]`} />
+      {/* Secondary orb — mid-left */}
+      <div className={`pointer-events-none absolute bottom-1/4 -left-20 h-[360px] w-[360px] rounded-full ${orbs.b} opacity-20 blur-[90px]`} />
+      {/* Accent orb — upper-left bleeds toward center */}
+      <div className={`pointer-events-none absolute -top-16 left-1/4 h-[280px] w-[280px] rounded-full ${orbs.c} opacity-15 blur-[80px]`} />
+      {/* Fade-to-app-color gradient overlay — wipes out the color as it approaches the right edge (app side) */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-gradient-to-l from-[#F5F6F8] via-[#F5F6F8]/70 to-transparent" />
+
+      {/* Text — free, not in a card, vertically centered, generous size */}
+      <div className="relative z-10 max-w-sm">
+        <p className="mb-5 text-[11px] font-bold tracking-[0.22em] uppercase" style={{ color: orbs.accent }}>{copy.eyebrow}</p>
+        <h2 className="mb-5 text-5xl font-bold leading-[1.05] tracking-[-0.03em] text-[#1C1C1E] text-balance" style={{ fontFamily: 'var(--font-display, Space Grotesk, sans-serif)' }}>{copy.heading}</h2>
+        <p className="text-lg leading-relaxed text-[#6B7280] text-pretty">{copy.tagline}</p>
       </div>
     </div>
   );

@@ -389,7 +389,7 @@ export default function BridgePanel() {
   return (
     <div className="space-y-4">
       {/* Main card */}
-      <div className="rounded-3xl bg-white p-6 shadow-sm space-y-4">
+      <div className="rounded-3xl bg-white p-4 lg:p-5 shadow-sm space-y-3">
 
         {/* Chain selectors */}
         <ChainDropdown label="From" value={srcChain} onChange={v => { setSrcChain(v); }} exclude={dstChain} disabled={busy} />
@@ -409,7 +409,7 @@ export default function BridgePanel() {
               const v = e.target.value.replace(/[^0-9.]/g, '');
               if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
             }}
-            className="w-full bg-transparent text-5xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+            className="w-full bg-transparent text-4xl lg:text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
             style={{ letterSpacing: '-0.02em' }}
           />
         </div>
@@ -430,7 +430,7 @@ export default function BridgePanel() {
         {/* Amount received estimate */}
         <div className="space-y-1">
           <span className="text-sm font-medium text-[#6B7280]">You Receive (est.)</span>
-          <div className="text-5xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+          <div className="text-4xl lg:text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
             {amount && parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : '0.00'}
           </div>
           <p className="text-xs text-[#9CA3AF]">USDC · 1:1 minus CCTP fees (~8-20s fast mode)</p>

@@ -284,8 +284,8 @@ export default function SwapPage() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <PageLayout brandSide="left" swapMode={mode}>
-    <div className="bg-[#F0F1F5] px-4 py-6 pb-28" suppressHydrationWarning>
-      <div className="mx-auto flex max-w-md flex-col gap-6">
+    <div className="bg-[#F0F1F5] px-4 py-3 lg:py-4 pb-28 lg:pb-4" suppressHydrationWarning>
+      <div className="mx-auto flex max-w-md flex-col gap-4 lg:gap-4">
 
         {/* Swap / Bridge toggle — at the very top so visible without scrolling on mobile */}
         <div className="flex rounded-2xl bg-white p-1 shadow-sm">
@@ -356,7 +356,7 @@ export default function SwapPage() {
 
         {/* Main swap card */}
         {step !== 'success' && (
-          <div className="rounded-3xl bg-white p-6 shadow-sm space-y-1">
+          <div className="rounded-3xl bg-white p-4 lg:p-5 shadow-sm space-y-1">
 
             {/* You Pay */}
             <div className="space-y-2">
@@ -384,7 +384,7 @@ export default function SwapPage() {
                     if (step === 'quoted') setStep('idle');
                   }
                 }}
-                className="w-full bg-transparent text-5xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+                className="w-full bg-transparent text-4xl lg:text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
                 style={{ letterSpacing: '-0.02em' }}
               />
               <TokenDropdown value={tokenIn} onChange={v => { setTokenIn(v); setQuote(null); setStep('idle'); }} exclude={tokenOut} disabled={busy} />
@@ -404,7 +404,7 @@ export default function SwapPage() {
             {/* You Receive */}
             <div className="space-y-2">
               <span className="text-sm font-medium text-[#6B7280]">You Receive</span>
-              <div className="text-5xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+              <div className="text-4xl lg:text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
                 {quote ? fmt(quote.amountOut, quote.outDecimals) : '0.00'}
               </div>
               <TokenDropdown value={tokenOut} onChange={v => { setTokenOut(v); setQuote(null); setStep('idle'); }} exclude={tokenIn} disabled={busy} />

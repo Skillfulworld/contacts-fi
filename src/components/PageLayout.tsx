@@ -18,7 +18,7 @@ interface PageLayoutProps {
  */
 export default function PageLayout({ children, brandSide, swapMode }: PageLayoutProps) {
   const appCol = (
-    <div className="w-full lg:w-[480px] lg:shrink-0 flex flex-col overflow-y-auto lg:max-h-[calc(100dvh-65px)] pb-24 lg:pb-6">
+    <div className="w-full lg:w-[480px] lg:shrink-0 flex flex-col lg:h-[calc(100dvh-65px)] lg:overflow-y-auto pb-24 lg:pb-0">
       {children}
     </div>
   );
@@ -34,17 +34,9 @@ export default function PageLayout({ children, brandSide, swapMode }: PageLayout
       {/* Desktop two-column */}
       <div className="hidden lg:flex h-[calc(100dvh-65px)]">
         {brandSide === 'left' ? (
-          <>
-            {brandCol}
-            <div className="w-px bg-[#E5E7EB] shrink-0" />
-            {appCol}
-          </>
+          <>{brandCol}{appCol}</>
         ) : (
-          <>
-            {appCol}
-            <div className="w-px bg-[#E5E7EB] shrink-0" />
-            {brandCol}
-          </>
+          <>{appCol}{brandCol}</>
         )}
       </div>
 
