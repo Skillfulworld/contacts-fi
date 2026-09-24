@@ -7,7 +7,7 @@
  * Supported chains sourced from Circle/Arc official documentation (2026-09-22).
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ArrowDown, ChevronDown, CheckCircle2, ExternalLink,
   Copy, AlertCircle, Loader2, RefreshCw,
@@ -23,13 +23,13 @@ import { useWallet } from '@/context/WalletContext';
 // Explorer URLs from Circle/Arc official docs
 // Chain strings match BridgeChain enum values exactly (verified from @circle-fin/app-kit v1.15.2)
 const BRIDGE_CHAINS = [
-  { label: 'Arc Mainnet',   chain: 'Arc',       chainId: 5042,    explorer: 'https://explorer.arc.io' },
-  { label: 'Ethereum',      chain: 'Ethereum',  chainId: 1,       explorer: 'https://etherscan.io' },
-  { label: 'Base',          chain: 'Base',      chainId: 8453,    explorer: 'https://basescan.org' },
-  { label: 'Arbitrum',      chain: 'Arbitrum',  chainId: 42161,   explorer: 'https://arbiscan.io' },
-  { label: 'Optimism',      chain: 'Optimism',  chainId: 10,      explorer: 'https://optimistic.etherscan.io' },
-  { label: 'Polygon',       chain: 'Polygon',   chainId: 137,     explorer: 'https://polygonscan.com' },
-  { label: 'Avalanche',     chain: 'Avalanche', chainId: 43114,   explorer: 'https://snowtrace.io' },
+  { label: 'Arc Mainnet', chain: 'Arc',       chainId: 5042,  explorer: 'https://explorer.arc.io',            logo: '/branding/arc.png'       },
+  { label: 'Ethereum',   chain: 'Ethereum',   chainId: 1,     explorer: 'https://etherscan.io',               logo: '/branding/ethereum.png'  },
+  { label: 'Base',       chain: 'Base',       chainId: 8453,  explorer: 'https://basescan.org',               logo: '/branding/base.png'      },
+  { label: 'Arbitrum',   chain: 'Arbitrum',   chainId: 42161, explorer: 'https://arbiscan.io',                logo: '/branding/arbitrum.png'  },
+  { label: 'Optimism',   chain: 'Optimism',   chainId: 10,    explorer: 'https://optimistic.etherscan.io',    logo: '/branding/optimism.png'  },
+  { label: 'Polygon',    chain: 'Polygon',    chainId: 137,   explorer: 'https://polygonscan.com',            logo: '/branding/polygon.png'   },
+  { label: 'Avalanche',  chain: 'Avalanche',  chainId: 43114, explorer: 'https://snowtrace.io',               logo: '/branding/avalanche.png' },
 ] as const;
 
 type ChainKey = typeof BRIDGE_CHAINS[number]['chain'];
@@ -65,20 +65,36 @@ function ChainDropdown({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const options  = BRIDGE_CHAINS.filter(c => c.chain !== exclude);
   const selected = BRIDGE_CHAINS.find(c => c.chain === value)!;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-[#6B7280]">{label}</span>
-      <div className="relative">
+      <div className="relative" ref={ref}>
         <button
           type="button"
           disabled={disabled}
           onClick={() => setOpen(o => !o)}
           className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-4 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
         >
-          <span>{selected.label}</span>
+          <span className="flex items-center gap-2.5">
+            <img src={selected.logo} alt={selected.label} className="h-6 w-6 rounded-full object-cover bg-[#EDEBFF]" />
+            {selected.label}
+          </span>
           <ChevronDown className={`h-4 w-4 text-[#6B7280] transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && (
@@ -90,9 +106,7 @@ function ChainDropdown({
                 onClick={() => { onChange(c.chain as ChainKey); setOpen(false); }}
                 className={`flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-semibold transition-colors hover:bg-[#F5F6F8] ${value === c.chain ? 'text-[#6D5DF6]' : 'text-[#1C1C1E]'}`}
               >
-                <span className="h-5 w-5 rounded-full bg-[#EDEBFF] text-[10px] font-bold text-[#6D5DF6] flex items-center justify-center leading-none">
-                  {c.label.slice(0, 1)}
-                </span>
+                <img src={c.logo} alt={c.label} className="h-6 w-6 rounded-full object-cover bg-[#EDEBFF] shrink-0" />
                 {c.label}
                 {value === c.chain && <CheckCircle2 className="ml-auto h-4 w-4 text-[#6D5DF6]" />}
               </button>
@@ -146,7 +160,7 @@ function StepRow({ step, destExplorer, srcExplorer }: { step: StepStatus; destEx
 
 // ─── Main component ────────────────────────────────────────────────────────
 export default function BridgePanel() {
-  const { walletProvider, walletAddress, isConnected, switchToArcMainnet, chainId } = useWallet();
+  const { walletProvider, walletAddress, isConnected, connectWallet, switchToArcMainnet, chainId } = useWallet();
 
   const [srcChain,  setSrcChain]  = useState<ChainKey>('Arc');
   const [dstChain,  setDstChain]  = useState<ChainKey>('Base');
@@ -476,7 +490,7 @@ export default function BridgePanel() {
       <div className="space-y-3">
         {!isConnected ? (
             <button
-              onClick={() => switchToArcMainnet()}
+              onClick={() => connectWallet()}
               className="w-full rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm"
             >
               Connect Wallet

@@ -122,7 +122,7 @@ function TokenDropdown({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SwapPage() {
-  const { walletProvider, walletAddress, isConnected, switchToArcMainnet, chainId } = useWallet();
+  const { walletProvider, walletAddress, isConnected, connectWallet, switchToArcMainnet, chainId } = useWallet();
 
   const [mode, setMode] = useState<'swap' | 'bridge'>('swap');
 
@@ -466,7 +466,7 @@ export default function SwapPage() {
           <div className="space-y-3">
             {!isConnected ? (
               <button
-                onClick={() => switchToArcMainnet()}
+                onClick={() => connectWallet()}
                 className="w-full rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm"
               >
                 Connect Wallet
