@@ -22,8 +22,8 @@ export default function LandingPage() {
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#EDEBFF] bg-[#F9F7FF] px-3 py-1">
               <span className="text-xs font-medium text-[#6D5DF6]">Powered by Arc</span>
             </div>
-            <div className="relative w-[180px] h-[36px] overflow-hidden">
-                <Image src="/branding/settlex-website-header-black.svg" alt="SettleX" fill className="object-contain object-left" />
+            <div className="w-[180px] h-[36px]">
+                <Image src="/branding/settlex-website-header-black.svg" alt="SettleX" width={180} height={36} className="h-full w-auto object-contain" unoptimized />
             </div>
         </div>
       </header>
