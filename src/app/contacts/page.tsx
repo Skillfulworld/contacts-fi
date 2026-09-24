@@ -28,7 +28,7 @@ export default function ContactsListPage() {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)] mb-1">Contacts</h1>
-            <p className="text-[#6B7280]">The Contacts app for crypto</p>
+            <p className="text-[#6B7280]">Your people on Settle Exchange</p>
           </div>
         </div>
 

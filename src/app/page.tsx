@@ -89,7 +89,7 @@ export default function LandingPage() {
             </div>
             <div className="p-12 rounded-[32px] border border-[#E5E7EB] bg-gradient-to-b from-white to-[#F3EBFF] shadow-sm text-center">
                 <h2 className="text-sm font-semibold text-[#6D5DF6] mb-2 uppercase tracking-widest">Solution</h2>
-                <p className="text-3xl font-semibold mb-2">SettleX fixes that.</p>
+                <p className="text-3xl font-semibold mb-2">Settle Exchange fixes that.</p>
                 <p className="text-[#6B7280]">Send USDC to anyone with a wallet.</p>
             </div>
         </div>

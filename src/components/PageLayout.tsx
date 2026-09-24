@@ -43,8 +43,8 @@ export default function PageLayout({ children, brandSide, swapMode }: PageLayout
       {/* Mobile single column */}
       <div className="lg:hidden">
         {children}
-        {/* Brand text below the functional area on mobile */}
-        <div className="px-6 pb-32 pt-10 border-t border-[#E5E7EB] mt-4">
+        {/* Brand text below the functional area on mobile — no box, gradient fades naturally */}
+        <div className="px-6 pb-32 pt-8">
           <PageBrandPanel swapMode={swapMode} />
         </div>
       </div>

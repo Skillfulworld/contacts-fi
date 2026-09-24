@@ -66,7 +66,7 @@ export default function SettingsPage() {
         <SettingItem title="Language" description="English (US)" onClick={() => setDialog({ title: 'Language', message: 'Multi-language support coming soon.' })} />
 
         <SectionHeader title="About" />
-        <SettingItem title="Version" description="1.0.0-alpha" onClick={() => setDialog({ title: 'Version', message: 'SettleX\nVersion 1.0.0-alpha\nBuilt on Arc Mainnet' })} />
+        <SettingItem title="Version" description="1.0.0-alpha" onClick={() => setDialog({ title: 'Version', message: 'Settle Exchange\nVersion 1.0.0-alpha\nBuilt on Arc Mainnet' })} />
         <SettingItem title="Privacy Policy" onClick={() => setDialog({ title: 'Privacy Policy', message: 'Privacy Policy coming soon.' })} />
         <SettingItem title="Support" onClick={() => setDialog({ title: 'Support', message: 'Support Center coming soon.' })} />
       </div>

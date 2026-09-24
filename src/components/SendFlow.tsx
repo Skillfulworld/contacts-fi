@@ -17,8 +17,8 @@ export const SendFlow = ({
   onClose: () => void;
   onTransactionComplete: (tx: { id: string; amount: string; status: string }) => void;
 }) => {
-  const { adapter, walletAddress, walletName, chainId, isConnected, refreshChain, switchToArcMainnet } = useWallet();
-  const [sendStep, setSendStep] = useState<'network' | 'review' | 'sending' | 'success' | 'error'>('network');
+  const { adapter, walletAddress, walletName, chainId, isConnected, connectWallet, refreshChain, switchToArcMainnet } = useWallet();
+  const [sendStep, setSendStep] = useState<'disconnected' | 'network' | 'review' | 'sending' | 'success' | 'error'>('network');
   const [amount, setAmount] = useState('');
   const [manualAddress] = useState(recipient.address || '');
   const [selectedWalletId, setSelectedWalletId] = useState('');
@@ -36,8 +36,7 @@ export const SendFlow = ({
     const init = async () => {
       setSelectedWalletId(wallets[0]?.id || '');
       if (!isConnected || !adapter || !walletAddress) {
-        setSendStep('error');
-        setSendError('Connect your wallet before sending funds.');
+        setSendStep('disconnected');
         return;
       }
       const currentChain = chainId || (await refreshChain());
@@ -142,6 +141,8 @@ export const SendFlow = ({
                 ? 'Sending'
                 : sendStep === 'error'
                 ? 'Unable to Continue'
+                : sendStep === 'disconnected'
+                ? 'Unable to Continue'
                 : 'Switch to Arc Mainnet'}
             </h2>
           </div>
@@ -151,6 +152,29 @@ export const SendFlow = ({
         </div>
 
         <div className="flex-grow overflow-y-auto pr-2">
+          {sendStep === 'disconnected' && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-[24px] border border-[#E5E7EB] bg-[#F5F6F8] p-4 text-sm leading-6 text-[#1C1C1E]">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#6D5DF6]" />
+                <span>Connect your wallet before sending funds.</span>
+              </div>
+              <Button className="w-full" onClick={async () => {
+                await connectWallet();
+                // Re-check connection after connect attempt
+                if (isConnected && adapter && walletAddress) {
+                  const currentChain = chainId || (await refreshChain());
+                  if (!isArcMainnetChainId(currentChain)) {
+                    setSendStep('network');
+                  } else {
+                    setSendStep('review');
+                  }
+                }
+              }}>
+                Connect Wallet
+              </Button>
+            </div>
+          )}
+
           {sendStep === 'network' && (
             <div className="space-y-4">
               <div className="rounded-[24px] border border-[#E5E7EB] bg-[#F5F6F8] p-4 text-sm leading-6 text-[#1C1C1E]">
@@ -259,7 +283,10 @@ export const SendFlow = ({
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
                 <span>{sendError || 'The transaction could not be completed.'}</span>
               </div>
-              <Button className="w-full" onClick={() => setSendStep('network')}>Try Again</Button>
+              <Button className="w-full" onClick={() => {
+                if (!isConnected) { setSendStep('disconnected'); }
+                else { setSendStep('network'); }
+              }}>Try Again</Button>
             </div>
           )}
         </div>
