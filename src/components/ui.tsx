@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState, lazy, Suspense } from 'react';
 
 import {
   Search,
@@ -16,8 +16,13 @@ import {
   Copy,
   ReceiptText,
   ArrowLeftRight,
+  Star,
+  Flame,
 } from 'lucide-react';
+import { usePoints } from '@/hooks/usePoints';
 import { getChainDisplayName, isArcMainnetChainId, useWallet } from '@/context/WalletContext';
+
+const CheckInPanel = lazy(() => import('@/components/CheckInPanel'));
 
 // ─── Page brand copy per route ─────────────────────────────────────────────────
 const PAGE_COPY: Record<string, { eyebrow: string; heading: string; tagline: string; side: 'left' | 'right' }> = {
@@ -26,6 +31,7 @@ const PAGE_COPY: Record<string, { eyebrow: string; heading: string; tagline: str
   '/swap':        { eyebrow: 'SWAP ASSETS',        heading: 'Change what you hold.',       tagline: 'Swap supported assets without leaving Settle Exchange.',                        side: 'left'  },
   '/swap/bridge': { eyebrow: 'Bridge',             heading: 'Move money further.',          tagline: 'Send to any chain in seconds with CCTP fast transfer.',                          side: 'left'  },
   '/transactions':{ eyebrow: 'YOUR ACTIVITY',     heading: 'Every move, accounted for.', tagline: 'See your payments, swaps and transfers in one clear history.',                  side: 'right' },
+  '/points':      { eyebrow: 'YOUR POINTS',      heading: 'Earn as you go.',            tagline: 'Check in daily, complete tasks, and build your streak on Settle Exchange.',   side: 'left'  },
   '/settings':    { eyebrow: 'YOUR SETTLE EXCHANGE', heading: 'Everything, your way.',   tagline: 'Manage your profile, preferences and Settle Exchange experience.',              side: 'left'  },
 };
 
@@ -67,6 +73,7 @@ const PANEL_ORBS: Record<string, { a: string; b: string; c: string; accent: stri
   '/swap':         { a: 'bg-[#60B8FF]',   b: 'bg-[#7B6EF6]',   c: 'bg-[#38BDF8]',   accent: '#60B8FF' },
   '/swap/bridge':  { a: 'bg-[#34D399]',   b: 'bg-[#60B8FF]',   c: 'bg-[#6EE7B7]',   accent: '#34D399' },
   '/transactions': { a: 'bg-[#A78BFA]',   b: 'bg-[#60B8FF]',   c: 'bg-[#7B6EF6]',   accent: '#A78BFA' },
+  '/points':       { a: 'bg-[#FFB347]',   b: 'bg-[#FF7A59]',   c: 'bg-[#A78BFA]',   accent: '#FFB347' },
   '/settings':     { a: 'bg-[#FF8FA3]',   b: 'bg-[#A78BFA]',   c: 'bg-[#7B6EF6]',   accent: '#A78BFA' },
 };
 
@@ -99,7 +106,9 @@ export const PageBrandPanel = ({ swapMode }: { swapMode?: 'swap' | 'bridge' }) =
 // --- WalletHeader ---
 export const WalletHeader = () => {
   const { isConnected, isConnecting, walletAddress, walletName, chainId, connectWallet, disconnectWallet, switchToArcMainnet } = useWallet();
+  const { isCheckInAvailable } = usePoints();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
 
@@ -138,7 +147,23 @@ export const WalletHeader = () => {
 
   if (isConnected) {
     return (
-      <div ref={buttonRef} className="relative z-50">
+      <div ref={buttonRef} className="relative z-50 flex items-center gap-2">
+        {/* Check-in notification dot */}
+        {isCheckInAvailable && (
+          <button
+            onClick={() => setCheckInOpen(prev => !prev)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#EDEBFF] text-[#6D5DF6] hover:bg-[#DDD8FF] transition-colors"
+            title="Daily check-in available"
+          >
+            <Flame className="h-4 w-4" />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#D64545] shadow-sm" />
+          </button>
+        )}
+        {checkInOpen && (
+          <Suspense fallback={null}>
+            <CheckInPanel onClose={() => setCheckInOpen(false)} />
+          </Suspense>
+        )}
         <button
           onClick={() => setMenuOpen((prev) => !prev)}
           className="flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-[#F3F4F6] px-3 py-2 shadow-[0_8px_24px_rgba(17,24,39,0.06)]"
@@ -207,16 +232,30 @@ export const DesktopTopNav = () => {
     { href: '/send',         label: 'Send'     },
     { href: '/swap',         label: 'Swap'     },
     { href: '/transactions', label: 'Activity' },
+    { href: '/points',       label: 'Points'   },
     { href: '/settings',     label: 'Settings' },
   ];
   return (
-    <header className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-[#E5E7EB] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <header
+      className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-[#1E3A5F]/20 sticky top-0 z-50 backdrop-blur-md"
+      style={{
+        background: 'linear-gradient(135deg, #F8F9FC 0%, #EEF1F7 40%, #16334F 100%)',
+      }}
+    >
       <BrandLogo />
       <nav className="flex items-center gap-1">
         {links.map(({ href, label }) => {
           const isActive = pathname === href || (href === '/swap' && pathname.startsWith('/swap'));
           return (
-            <Link key={href} href={href} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${isActive ? 'bg-[#EDEBFF] text-[#6D5DF6]' : 'text-[#6B7280] hover:text-[#1C1C1E] hover:bg-[#F5F6F8]'}`}>
+            <Link
+              key={href}
+              href={href}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                isActive
+                  ? 'bg-white/20 text-white shadow-sm'
+                  : 'text-[#16334F]/70 hover:text-[#16334F] hover:bg-white/15'
+              }`}
+            >
               {label}
             </Link>
           );
@@ -356,12 +395,14 @@ export const SectionHeader = ({ title, action }: { title: string; action?: React
 // --- BottomNavigation ---
 export const BottomNavigation = () => {
   const pathname = usePathname();
+  const { isCheckInAvailable } = usePoints();
   const links = [
-    { href: '/contacts', label: 'Contacts', icon: User },
-    { href: '/send', label: 'Send', icon: ArrowUpRight },
-    { href: '/swap', label: 'Swap', icon: ArrowLeftRight },
-    { href: '/transactions', label: 'Activity', icon: ReceiptText },
-    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/contacts',     label: 'Contacts', icon: User          },
+    { href: '/send',         label: 'Send',     icon: ArrowUpRight  },
+    { href: '/swap',         label: 'Swap',     icon: ArrowLeftRight},
+    { href: '/transactions', label: 'Activity', icon: ReceiptText   },
+    { href: '/points',       label: 'Points',   icon: Star          },
+    { href: '/settings',     label: 'Settings', icon: Settings      },
   ];
 
   return (
@@ -369,9 +410,12 @@ export const BottomNavigation = () => {
       {links.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href;
         return (
-          <Link key={href} href={href} className={`flex flex-col items-center gap-1 rounded-2xl px-4 py-2 transition-all duration-200 ${isActive ? 'bg-[#6F3FF5]/15 text-[#6F3FF5]' : 'text-[#F1F5F9] hover:bg-[#334155] hover:text-white'}`}>
-            <div className={`rounded-full p-2 ${isActive ? 'bg-[#6F3FF5]/20 shadow-sm' : ''}`}>
+          <Link key={href} href={href} className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-all duration-200 ${isActive ? 'bg-[#6F3FF5]/15 text-[#6F3FF5]' : 'text-[#F1F5F9] hover:bg-[#334155] hover:text-white'}`}>
+            <div className={`relative rounded-full p-2 ${isActive ? 'bg-[#6F3FF5]/20 shadow-sm' : ''}`}>
               <Icon className="h-5 w-5" />
+              {href === '/points' && isCheckInAvailable && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#D64545]" />
+              )}
             </div>
             <span className="text-[10px] font-semibold">{label}</span>
           </Link>

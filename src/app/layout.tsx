@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, DM_Sans } from "next/font/google";
 import "./globals.css";
 import RootLayoutContent from "./RootLayoutContent";
@@ -9,6 +9,12 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-body", display: "
 export const metadata: Metadata = {
   title: "Settle Exchange",
   description: "Send USDC to anyone on Arc Network. Swap, bridge, and manage your crypto contacts with Settle Exchange.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
 };
 
 export default function RootLayout({

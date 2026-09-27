@@ -6,17 +6,33 @@ import { PageBrandPanel } from '@/components/ui';
 interface PageLayoutProps {
   children: ReactNode;
   /** 'left' = brand panel left, app right. 'right' = app left, brand panel right. */
-  brandSide: 'left' | 'right';
+  brandSide?: 'left' | 'right';
   swapMode?: 'swap' | 'bridge';
+  /** fullWidth: no brand panel — page uses the full viewport (e.g. Points dashboard) */
+  fullWidth?: boolean;
 }
 
 /**
  * Two-column desktop layout wrapper.
  * - Desktop (lg+): side-by-side columns filling the viewport height.
- *   Brand panel occupies unused space; app column is fixed-width max-w-md.
+ *   Brand panel occupies unused space; app column is fixed-width.
  * - Mobile: single column, children first, brand panel below.
+ * - fullWidth: no brand panel, page uses full viewport width.
  */
-export default function PageLayout({ children, brandSide, swapMode }: PageLayoutProps) {
+export default function PageLayout({ children, brandSide = 'left', swapMode, fullWidth }: PageLayoutProps) {
+  if (fullWidth) {
+    return (
+      <>
+        {/* Desktop full-width */}
+        <div className="hidden lg:flex h-[calc(100dvh-65px)] overflow-y-auto">
+          {children}
+        </div>
+        {/* Mobile */}
+        <div className="lg:hidden">{children}</div>
+      </>
+    );
+  }
+
   const appCol = (
     <div className="w-full lg:w-[480px] lg:shrink-0 flex flex-col lg:h-[calc(100dvh-65px)] lg:overflow-y-auto pb-24 lg:pb-0">
       {children}
@@ -43,7 +59,7 @@ export default function PageLayout({ children, brandSide, swapMode }: PageLayout
       {/* Mobile single column */}
       <div className="lg:hidden">
         {children}
-        {/* Brand text below — matches page bg so no visible box; orbs create soft ambient color */}
+        {/* Brand text below — matches page bg; orbs create soft ambient color */}
         <div className="h-64 w-full">
           <PageBrandPanel swapMode={swapMode} />
         </div>

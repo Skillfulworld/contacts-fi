@@ -38,6 +38,19 @@
     font-family: var(--font-body, DM Sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-tap-highlight-color: transparent;
     text-rendering: optimizeLegibility;
+    /*
+     * Desktop layout breakpoint fix:
+     * Browser wallet extensions (e.g. MetaMask) open as overlays that shrink
+     * the visual viewport below 1024px, which triggers Tailwind's mobile layout.
+     * Using min-width on the html element locks the layout to the SCREEN width
+     * (layout viewport), not the visual viewport. Tailwind's `lg:` breakpoints
+     * respond to the layout viewport so this keeps the desktop layout stable
+     * while the wallet extension is open.
+     */
+  }
+
+  html {
+    min-width: 320px;
   }
 }
 
