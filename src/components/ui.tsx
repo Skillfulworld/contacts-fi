@@ -156,17 +156,17 @@ export const WalletHeader = () => {
   if (isConnected) {
     return (
       <div ref={buttonRef} className="relative z-50 flex items-center gap-2">
-        {/* Check-in notification dot */}
-        {isCheckInAvailable && (
-          <button
-            onClick={() => setCheckInOpen(prev => !prev)}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#EDEBFF] text-[#6D5DF6] hover:bg-[#DDD8FF] transition-colors"
-            title="Daily check-in available"
-          >
-            <Flame className="h-4 w-4" />
+        {/* Check-in notification button — always visible when available */}
+        <button
+          onClick={() => setCheckInOpen(prev => !prev)}
+          className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          title="Daily check-in"
+        >
+          <Flame className="h-4 w-4" />
+          {isCheckInAvailable && (
             <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#D64545] shadow-sm" />
-          </button>
-        )}
+          )}
+        </button>
         {checkInOpen && (
           <Suspense fallback={null}>
             <CheckInPanel onClose={() => setCheckInOpen(false)} />
@@ -222,13 +222,31 @@ export const WalletHeader = () => {
   }
 
   return (
-    <button
-      onClick={() => connectWallet()}
-      className="rounded-full bg-[#6D5DF6] px-5 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(109,93,246,0.18)] transition-all duration-200 active:scale-[0.98]"
-      disabled={isConnecting}
-    >
-      {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-    </button>
+    <div className="relative z-50 flex items-center gap-2">
+      {/* Check-in flame button — always shown regardless of wallet connection */}
+      <button
+        onClick={() => setCheckInOpen(prev => !prev)}
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+        title="Daily check-in"
+      >
+        <Flame className="h-4 w-4" />
+        {isCheckInAvailable && (
+          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#D64545] shadow-sm" />
+        )}
+      </button>
+      {checkInOpen && (
+        <Suspense fallback={null}>
+          <CheckInPanel onClose={() => setCheckInOpen(false)} />
+        </Suspense>
+      )}
+      <button
+        onClick={() => connectWallet()}
+        className="rounded-full bg-[#6D5DF6] px-5 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(109,93,246,0.18)] transition-all duration-200 active:scale-[0.98]"
+        disabled={isConnecting}
+      >
+        {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+      </button>
+    </div>
   );
 };
 
