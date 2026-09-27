@@ -59,9 +59,17 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
 };
 
 // --- BrandLogo ---
-export const BrandLogo = () => (
-  <Link href="/" className="flex items-center font-semibold text-[#1C1C1E] hover:text-[#6D5DF6] transition-colors">
-    <Image src="/branding/settlex-website-header-black.svg" alt="SettleX" width={120} height={28} className="h-7 w-auto object-contain" priority unoptimized />
+export const BrandLogo = ({ dark = false }: { dark?: boolean }) => (
+  <Link href="/" className="flex items-center font-semibold transition-colors">
+    <Image
+      src="/branding/settlex-website-header-black.svg"
+      alt="Settle Exchange"
+      width={120}
+      height={28}
+      className={`h-7 w-auto object-contain ${dark ? 'brightness-0 invert' : ''}`}
+      priority
+      unoptimized
+    />
   </Link>
 );
 
@@ -236,13 +244,8 @@ export const DesktopTopNav = () => {
     { href: '/settings',     label: 'Settings' },
   ];
   return (
-    <header
-      className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-[#1E3A5F]/20 sticky top-0 z-50 backdrop-blur-md"
-      style={{
-        background: 'linear-gradient(135deg, #F8F9FC 0%, #EEF1F7 40%, #16334F 100%)',
-      }}
-    >
-      <BrandLogo />
+    <header className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-[#1E3A5F]/20 sticky top-0 z-50 bg-[#16334F]">
+      <BrandLogo dark />
       <nav className="flex items-center gap-1">
         {links.map(({ href, label }) => {
           const isActive = pathname === href || (href === '/swap' && pathname.startsWith('/swap'));
@@ -253,7 +256,7 @@ export const DesktopTopNav = () => {
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 isActive
                   ? 'bg-white/20 text-white shadow-sm'
-                  : 'text-[#16334F]/70 hover:text-[#16334F] hover:bg-white/15'
+                  : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
             >
               {label}
