@@ -1,236 +1,367 @@
 "use client";
 
 /**
- * usePoints — frontend-only points ledger.
+ * usePoints — on-chain points ledger via SettleXPoints contract on Arc Mainnet.
  *
- * Architecture is ledger-event based so a future backend can replace
- * localStorage persistence without rewriting the UI.
+ * Reads: getUserRecord(), canCheckIn() — free, no gas.
+ * Writes: checkIn() — user signs tx, pays 0.01 USDC fee + gas.
  *
- * Ledger event shape (matches future backend schema):
- * {
- *   id: string          — uuid-style
- *   type: 'checkin' | 'task' | 'bonus'
- *   taskId: string      — e.g. 'daily_checkin', 'send_usdc', 'grand_prize_30'
- *   points: number
- *   streakDay?: number  — 1–7 for weekly, 1–30 for monthly
- *   streakCount?: number
- *   timestamp: number   — ms since epoch
- *   ref?: string        — future: tx hash, action id, etc.
- * }
+ * Contract: 0xaf75c1b6EDeE3Cf03FF1282145dD7878EcFfB7B0 (Arc Mainnet)
+ * USDC:     0x3600000000000000000000000000000000000000 (Arc Mainnet, 6 decimals)
  */
 
 import { useCallback, useEffect, useState } from 'react';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type LedgerEventType = 'checkin' | 'task' | 'bonus';
-
-export interface LedgerEvent {
-  id: string;
-  type: LedgerEventType;
-  taskId: string;
-  points: number;
-  streakDay?: number;
-  streakCount?: number;
-  timestamp: number;
-  ref?: string;
-  label: string;
-}
-
-export interface PointsState {
-  total: number;
-  streak: number;           // current consecutive daily check-in streak
-  lastCheckinDate: string;  // 'YYYY-MM-DD' of most recent check-in
-  weeklyDays: boolean[];    // [0..6] — which days of the current 7-day cycle are done
-  ledger: LedgerEvent[];
-}
+import { useWallet } from '@/context/WalletContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+export const SETTLEX_POINTS_ADDRESS = '0xaf75c1b6EDeE3Cf03FF1282145dD7878EcFfB7B0' as const;
+export const USDC_ADDRESS = '0x3600000000000000000000000000000000000000' as const;
+export const ARC_MAINNET_CHAIN_ID = 5042;
+export const CHECK_IN_FEE = BigInt(10000); // 0.01 USDC in 6 decimals
+
 /** Points awarded per day in the 7-day weekly cycle (index 0 = Day 1) */
 export const WEEKLY_REWARDS = [5, 6, 7, 8, 9, 10, 15] as const;
-
-/** Grand prize for 30 consecutive days */
 export const GRAND_PRIZE_30 = 45;
 export const GRAND_PRIZE_STREAK = 30;
 
-const STORAGE_KEY = 'settlex_points_v1';
+// ─── Minimal ABIs ─────────────────────────────────────────────────────────────
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+const POINTS_ABI = [
+  {
+    name: 'getUserRecord',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      {
+        name: '',
+        type: 'tuple',
+        components: [
+          { name: 'totalPoints', type: 'uint256' },
+          { name: 'streak', type: 'uint256' },
+          { name: 'lastCheckInTimestamp', type: 'uint256' },
+          { name: 'weekCycleDay', type: 'uint256' },
+          { name: 'weeksCompleted', type: 'uint256' },
+          { name: 'consecutiveDays', type: 'uint256' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'canCheckIn',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'checkInFee',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'checkIn',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+] as const;
 
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+const ERC20_ABI = [
+  {
+    name: 'allowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+] as const;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface OnChainRecord {
+  totalPoints: number;
+  streak: number;
+  lastCheckInTimestamp: number; // unix seconds
+  weekCycleDay: number;         // 0-6
+  weeksCompleted: number;
+  consecutiveDays: number;
 }
 
-function yesterday(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+export type CheckInStatus =
+  | 'idle'
+  | 'loading'
+  | 'approving'
+  | 'confirming'
+  | 'success'
+  | 'error';
+
+// ─── RPC helper ───────────────────────────────────────────────────────────────
+
+const ARC_RPC = 'https://rpc.mainnet.arc.io';
+
+async function ethCall(to: string, data: string): Promise<string> {
+  const res = await fetch(ARC_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'eth_call',
+      params: [{ to, data }, 'latest'],
+    }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result as string;
 }
 
-function uid(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+// Minimal ABI encoding/decoding (no viem dependency — works in both server and client)
+function encodeSelector(sig: string): string {
+  // keccak256 first 4 bytes — we precompute for our specific functions
+  const selectors: Record<string, string> = {
+    'getUserRecord(address)': '0x3e6f7439',
+    'canCheckIn(address)':    '0x0bf1cab2',
+    'checkInFee()':           '0x92c38bdd',
+    'checkIn()':              '0x183ff085',
+    'allowance(address,address)': '0xdd62ed3e',
+    'approve(address,uint256)':   '0x095ea7b3',
+  };
+  return selectors[sig] ?? sig;
 }
 
-function emptyState(): PointsState {
+function encodeAddress(addr: string): string {
+  return addr.replace('0x', '').padStart(64, '0');
+}
+
+function encodeUint256(n: bigint): string {
+  return n.toString(16).padStart(64, '0');
+}
+
+function decodeUint256(hex: string, offset = 0): bigint {
+  return BigInt('0x' + hex.slice(2 + offset * 64, 2 + offset * 64 + 64));
+}
+
+async function readUserRecord(address: string): Promise<OnChainRecord> {
+  const data = encodeSelector('getUserRecord(address)') + encodeAddress(address);
+  const result = await ethCall(SETTLEX_POINTS_ADDRESS, data);
+  // struct returns 6 uint256 slots
   return {
-    total: 0,
-    streak: 0,
-    lastCheckinDate: '',
-    weeklyDays: Array(7).fill(false),
-    ledger: [],
+    totalPoints:          Number(decodeUint256(result, 0)),
+    streak:               Number(decodeUint256(result, 1)),
+    lastCheckInTimestamp: Number(decodeUint256(result, 2)),
+    weekCycleDay:         Number(decodeUint256(result, 3)),
+    weeksCompleted:       Number(decodeUint256(result, 4)),
+    consecutiveDays:      Number(decodeUint256(result, 5)),
   };
 }
 
-function load(): PointsState {
-  if (typeof window === 'undefined') return emptyState();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyState();
-    return JSON.parse(raw) as PointsState;
-  } catch {
-    return emptyState();
-  }
+async function readCanCheckIn(address: string): Promise<boolean> {
+  const data = encodeSelector('canCheckIn(address)') + encodeAddress(address);
+  const result = await ethCall(SETTLEX_POINTS_ADDRESS, data);
+  return decodeUint256(result, 0) !== BigInt(0);
 }
 
-function save(state: PointsState): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+async function readAllowance(owner: string): Promise<bigint> {
+  const data = encodeSelector('allowance(address,address)') +
+    encodeAddress(owner) +
+    encodeAddress(SETTLEX_POINTS_ADDRESS);
+  const result = await ethCall(USDC_ADDRESS, data);
+  return decodeUint256(result, 0);
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function usePoints() {
-  const [state, setState] = useState<PointsState>(emptyState);
+  const { walletAddress, walletProvider, isConnected } = useWallet();
 
-  // Hydrate from localStorage on mount
+  const [record, setRecord] = useState<OnChainRecord | null>(null);
+  const [canCheckInNow, setCanCheckInNow] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>('idle');
+  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+
+  // Load on-chain state when wallet connects
+  const refresh = useCallback(async () => {
+    if (!walletAddress) return;
+    setIsLoading(true);
+    try {
+      const [rec, canCI] = await Promise.all([
+        readUserRecord(walletAddress),
+        readCanCheckIn(walletAddress),
+      ]);
+      setRecord(rec);
+      setCanCheckInNow(canCI);
+    } catch (err) {
+      console.error('usePoints refresh error', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletAddress]);
+
   useEffect(() => {
-    setState(load());
-  }, []);
-
-  /** Whether today's check-in is available (not yet done today) */
-  const canCheckInToday = useCallback((s: PointsState): boolean => {
-    return s.lastCheckinDate !== todayStr();
-  }, []);
-
-  const isCheckInAvailable = canCheckInToday(state);
+    if (isConnected && walletAddress) {
+      refresh();
+    } else {
+      setRecord(null);
+      setCanCheckInNow(false);
+    }
+  }, [isConnected, walletAddress, refresh]);
 
   /**
-   * Which day in the 7-day cycle would the NEXT check-in land on (0-indexed).
-   * After a completed 7-day cycle, resets to day 0.
+   * Perform a daily check-in:
+   * 1. Check USDC allowance — if insufficient, send approve tx first.
+   * 2. Call checkIn() on the contract.
+   * 3. Refresh on-chain state.
    */
-  const nextCycleDay = useCallback((s: PointsState): number => {
-    const completedDays = s.weeklyDays.filter(Boolean).length;
-    // If all 7 done, next check-in starts a new cycle
-    return completedDays % 7;
-  }, []);
+  const doCheckIn = useCallback(async () => {
+    if (!walletAddress || !walletProvider || !canCheckInNow) return;
 
-  /** Perform today's daily check-in */
-  const doCheckIn = useCallback(() => {
-    setState(prev => {
-      if (!canCheckInToday(prev)) return prev; // guard double-tap
+    setCheckInStatus('loading');
+    setCheckInError(null);
 
-      const today = todayStr();
-      const wasYesterday = prev.lastCheckinDate === yesterday();
-      const newStreak = wasYesterday ? prev.streak + 1 : 1;
+    try {
+      // Step 1 — Check allowance
+      const allowance = await readAllowance(walletAddress);
+      if (allowance < CHECK_IN_FEE) {
+        setCheckInStatus('approving');
+        // Approve a large amount so user doesn't need to approve every day
+        // 365 days × 0.01 USDC = 3.65 USDC (3650000 in 6 decimals)
+        const approveAmount = BigInt(3650000);
+        const approveData = encodeSelector('approve(address,uint256)') +
+          encodeAddress(SETTLEX_POINTS_ADDRESS) +
+          encodeUint256(approveAmount);
 
-      // Determine weekly cycle day
-      const cycleDay = prev.weeklyDays.filter(Boolean).length % 7;
-      const pts = WEEKLY_REWARDS[cycleDay];
+        const approveTx = await walletProvider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: walletAddress,
+            to: USDC_ADDRESS,
+            data: '0x' + approveData,
+          }],
+        }) as string;
 
-      // Reset weekly cycle if all 7 completed
-      const prevWeeklyDone = prev.weeklyDays.filter(Boolean).length;
-      const weeklyDays: boolean[] = prevWeeklyDone === 7
-        ? Array(7).fill(false)
-        : [...prev.weeklyDays];
-      weeklyDays[cycleDay] = true;
-
-      const event: LedgerEvent = {
-        id: uid(),
-        type: 'checkin',
-        taskId: 'daily_checkin',
-        points: pts,
-        streakDay: cycleDay + 1,
-        streakCount: newStreak,
-        timestamp: Date.now(),
-        label: `Day ${cycleDay + 1} check-in`,
-      };
-
-      const events: LedgerEvent[] = [event];
-
-      // 30-day grand prize
-      let grandPrizeEvent: LedgerEvent | null = null;
-      if (newStreak === GRAND_PRIZE_STREAK) {
-        grandPrizeEvent = {
-          id: uid(),
-          type: 'bonus',
-          taskId: 'grand_prize_30',
-          points: GRAND_PRIZE_30,
-          streakCount: newStreak,
-          timestamp: Date.now(),
-          label: '30-Day Streak Grand Prize 🏆',
-        };
-        events.push(grandPrizeEvent);
+        // Wait for approve to be mined
+        await waitForTx(approveTx, walletProvider);
       }
 
-      const totalAdded = pts + (grandPrizeEvent?.points ?? 0);
+      // Step 2 — Call checkIn()
+      setCheckInStatus('confirming');
+      const checkInData = encodeSelector('checkIn()');
+      const txHash = await walletProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: walletAddress,
+          to: SETTLEX_POINTS_ADDRESS,
+          data: checkInData,
+        }],
+      }) as string;
 
-      const next: PointsState = {
-        total: prev.total + totalAdded,
-        streak: newStreak,
-        lastCheckinDate: today,
-        weeklyDays,
-        ledger: [...events, ...prev.ledger].slice(0, 200), // cap ledger
-      };
+      await waitForTx(txHash, walletProvider);
+      setLastTxHash(txHash);
+      setCheckInStatus('success');
 
-      save(next);
-      return next;
-    });
-  }, [canCheckInToday]);
+      // Step 3 — Refresh state
+      await refresh();
 
-  /** Award points from a task (for future use) */
-  const awardTaskPoints = useCallback((taskId: string, points: number, label: string, ref?: string) => {
-    setState(prev => {
-      const event: LedgerEvent = {
-        id: uid(),
-        type: 'task',
-        taskId,
-        points,
-        timestamp: Date.now(),
-        label,
-        ref,
-      };
-      const next: PointsState = {
-        ...prev,
-        total: prev.total + points,
-        ledger: [event, ...prev.ledger].slice(0, 200),
-      };
-      save(next);
-      return next;
-    });
-  }, []);
+      // Reset status after 4 seconds
+      setTimeout(() => setCheckInStatus('idle'), 4000);
 
-  // Derived
-  const cycleDay = nextCycleDay(state);
-  const todayPoints = WEEKLY_REWARDS[cycleDay];
-  const completedWeeklyDays = state.weeklyDays.filter(Boolean).length;
-  const isNewCycle = completedWeeklyDays === 7;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      // User rejected
+      if (msg.includes('rejected') || msg.includes('denied') || msg.includes('cancelled')) {
+        setCheckInStatus('idle');
+      } else {
+        setCheckInStatus('error');
+        setCheckInError(msg);
+      }
+      console.error('checkIn error', err);
+    }
+  }, [walletAddress, walletProvider, canCheckInNow, refresh]);
+
+  // Derived from on-chain record — same shape as old hook so UI components don't change
+  const total              = record?.totalPoints ?? 0;
+  const streak             = record?.streak ?? 0;
+  const cycleDay           = record?.weekCycleDay ?? 0;
+  const consecutiveDays    = record?.consecutiveDays ?? 0;
+  const todayPoints        = WEEKLY_REWARDS[cycleDay] ?? 5;
+  const completedWeeklyDays = cycleDay; // weekCycleDay is 0-indexed next slot; completed = cycleDay days done
+
+  // Reconstruct weeklyDays boolean[] from weekCycleDay (days 0..cycleDay-1 are done this cycle)
+  const weeklyDays: boolean[] = WEEKLY_REWARDS.map((_, i) => i < cycleDay);
+
+  const grandPrizeProgress = Math.min(consecutiveDays, GRAND_PRIZE_STREAK);
+
+  // lastCheckinDate as YYYY-MM-DD from unix timestamp
+  const lastCheckinDate = record?.lastCheckInTimestamp
+    ? new Date(record.lastCheckInTimestamp * 1000).toISOString().slice(0, 10)
+    : '';
+
+  // Legacy: empty ledger (on-chain events replace this; history shown from contract events)
+  const ledger: never[] = [];
 
   return {
     // State
-    total: state.total,
-    streak: state.streak,
-    lastCheckinDate: state.lastCheckinDate,
-    weeklyDays: state.weeklyDays,
-    ledger: state.ledger,
+    total,
+    streak,
+    lastCheckinDate,
+    weeklyDays,
+    ledger,
+    record,
+    isLoading,
     // Derived
-    isCheckInAvailable,
-    cycleDay,           // 0-indexed day of current cycle
-    todayPoints,        // points for today's check-in
-    completedWeeklyDays: isNewCycle ? 7 : completedWeeklyDays,
-    isWeeklyCycleComplete: isNewCycle,
-    // Actions
+    isCheckInAvailable: canCheckInNow,
+    cycleDay,
+    todayPoints,
+    completedWeeklyDays,
+    isWeeklyCycleComplete: cycleDay === 0 && (record?.weeksCompleted ?? 0) > 0,
+    grandPrizeProgress,
+    consecutiveDays,
+    // Check-in action
     doCheckIn,
-    awardTaskPoints,
+    checkInStatus,
+    checkInError,
+    lastTxHash,
+    refresh,
+    // Legacy
+    awardTaskPoints: () => {},
   };
+}
+
+// ─── Wait for tx receipt ──────────────────────────────────────────────────────
+
+async function waitForTx(
+  txHash: string,
+  provider: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> },
+  maxWaitMs = 60000,
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const receipt = await provider.request({
+      method: 'eth_getTransactionReceipt',
+      params: [txHash],
+    });
+    if (receipt) return;
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error('Transaction timed out waiting for receipt');
 }

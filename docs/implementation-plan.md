@@ -1,14 +1,38 @@
-Looking back at the conversation, I only mentioned three fixes clearly. Let me recount what was discussed:
+You're in the right place. Here are the exact steps:
 
-1. **Chain logos not showing** — replace GitHub raw URLs with local `/public/chain-logos/` paths
-2. **Bottom "Connect Wallet" button not working** — calls `switchToArcMainnet()` instead of `connectWallet()`
-3. **Dropdown click-outside to close** — add `useRef` + `useEffect` click-outside listener to `ChainDropdown`
+---
 
-The "fourth fix" I mentioned was actually me misnumbering — I said "four fixes" in the last message but listed only three. There were only ever three fixes discussed for `BridgePanel.tsx`, plus the bottom Connect Wallet button fix which is in `swap/page.tsx`. So technically:
+**Step 1 — Create a Mainnet API Key**
 
-- **Fix 1:** Chain logos → `BridgePanel.tsx`
-- **Fix 2:** Connect Wallet button → `BridgePanel.tsx` (the bottom CTA in bridge mode)
-- **Fix 3:** Dropdown click-outside → `BridgePanel.tsx`
-- **Fix 4 (the one I called "bottom Connect Wallet on swap page"):** The wide Connect Wallet button at the bottom of the **Swap** (DEX) section in `swap/page.tsx` — that one also needs to call `connectWallet()` properly
+1. In the Circle Console (mainnet toggle ON), click **Keys** in the left sidebar
+2. Click **Create new key** (or similar button)
+3. Name it something like "SettleX Mainnet"
+4. Copy the API key — it will look like `LIVE_API_KEY:your-id:your-secret`
+5. Add it to `.env.local` in the Code panel:
+```
+CIRCLE_API_KEY=LIVE_API_KEY:your-id:your-secret
+```
 
-That's the fourth one. Switch to Build mode and I'll apply all four.
+**Do not paste the key in chat — only in the Code panel.**
+
+---
+
+**Step 2 — Entity Secret (one-time setup)**
+
+You only need to do this once — it's a permanent cryptographic secret tied to your Circle account. I will generate it for you in Build mode. Just confirm Step 1 is done first.
+
+---
+
+**Step 3 — That's it**
+
+Once the API key is in `.env.local` and confirmed, tell me and I will:
+1. Generate your entity secret + recovery file
+2. Register it with Circle
+3. Write the `SettleXPoints.sol` contract
+4. Run a security review
+5. Run unit tests
+6. Deploy to Arc Mainnet from your Circle account
+7. Build the Supabase schema + SIWE auth + backend
+8. Wire the frontend
+
+Go ahead and create the API key and add it to `.env.local`, then come back and say "API key is in."

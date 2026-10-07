@@ -11,12 +11,15 @@
   "dependencies": {
     "@circle-fin/adapter-viem-v2": "^1.18.0",
     "@circle-fin/app-kit": "^1.15.2",
-    "@supabase/supabase-js": "2.110.7",
+    "@circle-fin/developer-controlled-wallets": "^10.8.1",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@supabase/supabase-js": "^2.110.7",
     "framer-motion": "^13.0.0",
     "lucide-react": "^1.28.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
+    "siwe": "^3.0.0",
     "viem": "^2.55.11"
   },
   "devDependencies": {

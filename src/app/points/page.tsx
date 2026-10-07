@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   Flame, Trophy, Star, CheckCircle2, Circle,
-  Zap, ArrowUpRight, Gift, Users, Repeat2, ExternalLink,
+  Zap, ArrowUpRight, Users, Repeat2, ExternalLink, Loader2,
 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { usePoints, WEEKLY_REWARDS, GRAND_PRIZE_30, GRAND_PRIZE_STREAK } from '@/hooks/usePoints';
@@ -63,24 +63,24 @@ export default function PointsPage() {
     total,
     streak,
     weeklyDays,
-    ledger,
     isCheckInAvailable,
     cycleDay,
     todayPoints,
     completedWeeklyDays,
+    grandPrizeProgress,
+    checkInStatus,
     doCheckIn,
+    isLoading,
   } = usePoints();
 
   const [checkedIn, setCheckedIn] = useState(false);
 
-  const handleCheckIn = () => {
+  const handleCheckIn = async () => {
     if (!isCheckInAvailable) return;
-    doCheckIn();
+    await doCheckIn();
     setCheckedIn(true);
     setTimeout(() => setCheckedIn(false), 3000);
   };
-
-  const grandPrizeProgress = Math.min(streak, GRAND_PRIZE_STREAK);
   const grandPrizePct = Math.round((grandPrizeProgress / GRAND_PRIZE_STREAK) * 100);
 
   // ─── Left column: check-in + history (mobile: full page) ──────────────────
@@ -150,9 +150,11 @@ export default function PointsPage() {
         {isCheckInAvailable ? (
           <button
             onClick={handleCheckIn}
-            className="w-full rounded-2xl bg-[#3B82F6] py-3.5 font-semibold text-white shadow-[0_8px_24px_rgba(59,130,246,0.22)] transition-all active:scale-[0.98] hover:bg-[#2563EB]"
+            disabled={checkInStatus === 'approving' || checkInStatus === 'confirming' || checkInStatus === 'loading' || isLoading}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#3B82F6] py-3.5 font-semibold text-white shadow-[0_8px_24px_rgba(59,130,246,0.22)] transition-all active:scale-[0.98] hover:bg-[#2563EB] disabled:opacity-70 disabled:cursor-wait"
           >
-            {checkedIn ? '✓ Checked in!' : `Check in · +${todayPoints} pts`}
+            {(checkInStatus === 'approving' || checkInStatus === 'confirming' || checkInStatus === 'loading') && <Loader2 className="h-4 w-4 animate-spin" />}
+            {checkedIn ? '✓ Checked in!' : checkInStatus === 'approving' ? 'Approving USDC…' : checkInStatus === 'confirming' ? 'Confirm in wallet…' : `Check in · +${todayPoints} pts`}
           </button>
         ) : (
           <div className="flex items-center justify-center gap-2 rounded-2xl bg-[#F3F4F6] py-3 text-sm font-semibold text-[#6B7280]">
@@ -183,35 +185,13 @@ export default function PointsPage() {
         </p>
       </div>
 
-      {/* Points history — mobile shows here; desktop hidden (shown in right col) */}
-      {ledger.length > 0 && (
-        <div className="lg:hidden">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280] px-1">History</p>
-          <div className="rounded-3xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
-            {ledger.slice(0, 10).map((event, idx) => (
-              <div key={event.id} className={`flex items-center justify-between px-4 py-3 ${idx < Math.min(ledger.length, 10) - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full ${BLUE}`}>
-                    {event.type === 'bonus' ? <Gift className="h-4 w-4" /> : <Flame className="h-4 w-4" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#1C1C1E]">{event.label}</p>
-                    <p className="text-xs text-[#9CA3AF]">{new Date(event.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                </div>
-                <span className="text-sm font-bold text-[#3B82F6]">+{event.points}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {ledger.length === 0 && (
-        <div className="lg:hidden flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-12 text-center shadow-sm">
-          <Circle className="h-10 w-10 text-[#E5E7EB] mb-3" />
-          <p className="font-semibold text-[#1C1C1E]">No activity yet</p>
-          <p className="text-sm text-[#6B7280] mt-1">Check in daily to start earning points.</p>
-        </div>
-      )}
+      {/* Points history link — full history in Activity tab */}
+      <div className="lg:hidden flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-8 text-center shadow-sm">
+        <Circle className="h-8 w-8 text-[#BFDBFE] mb-2" />
+        <p className="text-sm font-semibold text-[#1C1C1E]">On-chain history</p>
+        <p className="text-xs text-[#6B7280] mt-1">Your check-in history lives on Arc Mainnet.</p>
+        <a href="/transactions" className="mt-3 text-xs font-semibold text-[#3B82F6] underline">View Activity tab</a>
+      </div>
     </div>
   );
 
@@ -271,35 +251,13 @@ export default function PointsPage() {
         })}
       </div>
 
-      {/* History — desktop */}
-      {ledger.length > 0 && (
-        <div>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280] px-1">History</p>
-          <div className="rounded-3xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
-            {ledger.slice(0, 15).map((event, idx) => (
-              <div key={event.id} className={`flex items-center justify-between px-4 py-3 ${idx < Math.min(ledger.length, 15) - 1 ? 'border-b border-[#F3F4F6]' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full ${BLUE}`}>
-                    {event.type === 'bonus' ? <Gift className="h-4 w-4" /> : <Flame className="h-4 w-4" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[#1C1C1E]">{event.label}</p>
-                    <p className="text-xs text-[#9CA3AF]">{new Date(event.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                </div>
-                <span className="text-sm font-bold text-[#3B82F6]">+{event.points}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {ledger.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-12 text-center shadow-sm">
-          <Circle className="h-10 w-10 text-[#E5E7EB] mb-3" />
-          <p className="font-semibold text-[#1C1C1E]">No activity yet</p>
-          <p className="text-sm text-[#6B7280] mt-1">Check in daily to start earning points.</p>
-        </div>
-      )}
+      {/* History — desktop: link to Activity tab */}
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-10 text-center shadow-sm">
+        <Circle className="h-8 w-8 text-[#BFDBFE] mb-2" />
+        <p className="text-sm font-semibold text-[#1C1C1E]">On-chain history</p>
+        <p className="text-xs text-[#6B7280] mt-1">Check-in history lives permanently on Arc Mainnet.</p>
+        <a href="/transactions" className="mt-3 text-xs font-semibold text-[#3B82F6] underline">View Activity tab</a>
+      </div>
     </div>
   );
 
