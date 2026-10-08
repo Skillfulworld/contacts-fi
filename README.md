@@ -1,269 +1,158 @@
-# ContactFi
+# Settle Exchange
 
-**Send USDC to anyone. Not just users of the same app.**
+**A simple USDC payment layer for people, wallets, and everyday transactions on Arc.**
 
-ContactFi is a mobile-first crypto contacts and payments application built on **Arc Network** using **Circle AppKit**.
+Settle Exchange makes sending USDC easier by turning wallet addresses into reusable contacts.
 
-Unlike traditional payment apps that require both sender and recipient to have accounts on the same platform, ContactFi lets you send **USDC to any wallet address**, whether the recipient has ever used ContactFi or not.
+Instead of remembering or copying wallet addresses every time you pay someone, save a person once, attach their different wallets and networks, and choose the right destination when you need to send.
 
-Simply save someone's wallet once, give it a recognizable name, and send USDC in seconds.
+Settle Exchange is built around a simple idea:
 
----
+> **Your contacts should be easier to remember than your wallet addresses.**
 
-# The Problem
+## What Settle Exchange does
 
-Today's crypto payment apps have a major UX problem.
+### Contacts
 
-You often need to:
+Save people, not addresses. Attach multiple wallet addresses to a single contact — different providers, different networks — and choose where to send when you need to pay.
 
-- ask people for wallet addresses every time
-- copy and paste long hexadecimal addresses
-- worry about sending to the wrong address
-- remember which wallet belongs to which person
-- convince recipients to download the same app before you can pay them
+When sending, choose:
 
-Traditional payment apps lock users inside their own ecosystem.
+**Contact → Wallet → Token → Amount → Send**
 
-If someone isn't registered, you simply can't send them money.
+This makes recurring USDC payments much simpler than repeatedly copying and pasting addresses.
 
----
+### Send USDC
 
-# Our Solution
+Send USDC directly to any saved wallet address on Arc Mainnet.
 
-ContactFi works like your phone contacts.
+The recipient does not need a Settle Exchange account to receive funds. Settle Exchange makes the sender's payment workflow easier while the transaction settles on-chain.
 
-Instead of saving phone numbers...
+### Swap
 
-you save wallet addresses.
+Settle Exchange includes a working DEX swap interface on **Arc Mainnet**, powered by Uniswap V3, allowing users to swap supported assets without leaving the application.
 
-Each contact can contain multiple wallets from different providers.
+### Bridge
 
-Examples:
+Settle Exchange includes a CCTP V2-powered USDC bridge for moving USDC between supported chains — Arc, Ethereum, Base, Arbitrum, Optimism, Polygon, and Avalanche.
 
-- MetaMask
-- Bitget Wallet
-- Trust Wallet
-- Coinbase Wallet
-- Binance Wallet
-- Phantom
-- or any EVM compatible wallet
+### Points
 
-Once saved, sending USDC becomes as easy as selecting a contact.
+Settle Exchange includes an on-chain points system powered by a Settle Exchange smart contract deployed on Arc Mainnet.
 
-No copying.
+The points system supports:
 
-No pasting.
+* Daily check-ins with a 0.01 USDC platform contribution per check-in
+* 7-day streak reward schedule (5, 6, 7, 8, 9, 10, 15 points per day)
+* 30-day grand prize (+45 bonus points)
+* Verifiable, wallet-tied point balances stored permanently on Arc
+* Future tasks and activity-based rewards
 
-No searching through chat history.
+Points are tied to a wallet address. When a user reconnects their wallet, their full points history reappears automatically.
 
-No remembering addresses.
+## Why Arc
 
----
+Settle Exchange is built around **USDC on Arc**.
 
-# Why ContactFi is Different
+Arc provides the settlement layer for all Settle Exchange transactions. On Arc, USDC is the native gas token — users pay transaction fees in USDC with no separate gas token required.
 
-✅ Send USDC to **any wallet**
+Settle Exchange currently uses:
 
-No ContactFi account required for the recipient.
+* Arc Mainnet (chain ID 5042)
+* USDC as the native asset and gas token
+* CCTP V2 for cross-chain USDC transfers
+* Uniswap V3 on Arc for DEX swaps
+* On-chain Settle Exchange Points contract
 
----
+The goal is to make Arc practical for an everyday consumer payment experience — blockchain interaction that works without requiring users to understand it first.
 
-✅ Contact-first experience
+## Current status
 
-Choose a person.
+**Live on Arc Mainnet**
 
-Not a wallet address.
+Settle Exchange currently has working:
 
----
+* Contact-based USDC payments
+* Arc Mainnet transactions
+* DEX swaps on Arc Mainnet (Uniswap V3)
+* CCTP V2 USDC bridging (7 supported chains)
+* Wallet connection (MetaMask and EVM wallets)
+* On-chain activity tracking
+* On-chain Settle Exchange Points contract
+* Points dashboard and daily check-in experience
+* Wallet-tied point persistence
 
-✅ Multiple wallets per contact
+## Architecture
 
-Store several wallets under one person.
+```text
+                     Settle Exchange
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+       Contacts           Payments          Points
+          │                 │                 │
+          │              USDC on Arc     Points Contract
+          │                 │            (Arc Mainnet)
+          └─────────────────┴─────────────────┘
+                            │
+                       Arc Mainnet
+                            │
+                 Circle / Arc Infrastructure
+                   │                   │
+              Uniswap V3           CCTP V2 Bridge
+           (DEX on Arc)         (Cross-chain USDC)
+```
 
-Example:
+## Smart Contract
 
-John
+The Settle Exchange Points contract is deployed on Arc Mainnet.
 
-- MetaMask
-- Bitget
-- Trust Wallet
+**Address:** `0xaf75c1b6EDeE3Cf03FF1282145dD7878EcFfB7B0`
 
----
+The contract:
+- Records daily check-ins with a 20-hour cooldown
+- Enforces streak logic and awards points per the weekly schedule
+- Collects a 0.01 USDC platform contribution per check-in
+- Emits on-chain events for every point-earning action
+- Owner-controlled fee adjustment (max 0.05 USDC, can be set to zero)
+- Emergency pause capability
 
-✅ Mobile-first
+## Built for everyday payments
 
-Designed primarily for smartphones.
+Most crypto payment experiences begin with a wallet address.
 
-Large touch targets.
+Settle Exchange starts with **people**.
 
-Simple navigation.
+A wallet address is useful for a blockchain, but a contact is useful for a human.
 
-Fast payment flow.
+Settle Exchange connects the two.
 
----
+## Links
 
-✅ Arc Network + Circle AppKit
+* **Live App:** https://contactfi.vercel.app
+* **GitHub:** https://github.com/Skillfulworld/contacts-fi
+* **Arc:** https://www.arc.io/
+* **Arc Documentation:** https://docs.arc.io/
+* **Points Contract:** https://explorer.arc.io/address/0xaf75c1b6EDeE3Cf03FF1282145dD7878EcFfB7B0
 
-Built using Arc Testnet and Circle's AppKit send flow.
+## Development
 
----
+This project is actively being developed toward a broader consumer payment experience on Arc.
 
-# Features
+Future development may include:
 
-- Wallet connection
-- Arc Testnet support
-- Circle AppKit integration
-- Send USDC
-- Contact management
-- Multiple wallets per contact
-- Default wallet selection
-- Transaction history
-- Transaction filtering
-- Local persistence
-- Search contacts
-- Mobile-first UI
+* Payment requests and payment links
+* QR code payments
+* Verified on-chain task rewards (swap, bridge, send milestones)
+* Operator-signed task verification system
+* Developer APIs
+* Agentic payments
+* Messaging
 
----
+These are planned directions and are not part of the current live application.
 
-# User Flow
+## Disclaimer
 
-1. Connect wallet
+Settle Exchange is an independent application built on and integrated with Arc and Circle infrastructure. Settle Exchange does not operate Arc, Circle, USDC, or CCTP.
 
-↓
-
-2. Add a contact
-
-↓
-
-3. Save one or multiple wallet addresses
-
-↓
-
-4. Select the contact
-
-↓
-
-5. Enter amount
-
-↓
-
-6. Review transaction
-
-↓
-
-7. Send USDC
-
-↓
-
-8. View transaction history
-
----
-
-# Tech Stack
-
-- Next.js 14
-- TypeScript
-- TailwindCSS
-- Circle AppKit
-- Arc Testnet
-- React Context
-- Local Storage
-
----
-
-# Arc Network
-
-Network
-
-- Arc Testnet
-
-RPC
-
-https://rpc.testnet.arc.io
-
-Chain ID
-
-5042002
-
-Native Gas Token
-
-USDC
-
-Explorer
-
-https://testnet.arcscan.app
-
----
-
-# Circle AppKit
-
-ContactFi uses Circle AppKit for:
-
-- Wallet connection
-- Gas estimation
-- Transaction preparation
-- USDC transfers
-- Arc Network integration
-
----
-
-# Current MVP
-
-Implemented
-
-- Contact management
-- Wallet management
-- Multi-wallet contacts
-- Arc Testnet integration
-- Send USDC
-- Review transaction screen
-- Transaction success screen
-- Activity page
-- Search
-- Filters
-- Local persistence
-
----
-
-# Future Roadmap
-
-- Circle Smart Accounts
-- Contact syncing across devices
-- ENS support
-- Wallet avatar resolution
-- QR payments
-- Payment requests
-- Multi-token support
-- Cross-chain transfers
-- Contact import/export
-- NFC payments
-- Circle CCTP integration
-- Biometric authentication
-
----
-
-# Why This Matters
-
-Crypto has solved moving money.
-
-It hasn't solved paying people.
-
-People remember names.
-
-Not wallet addresses.
-
-ContactFi bridges that gap by combining a familiar contacts experience with programmable USDC payments.
-
-Our goal is simple:
-
-**Make crypto payments feel as easy as sending a text message.**
-
----
-
-# Repository
-
-https://github.com/Skillfulworld/contacts-fi
-
----
-
-Built with ❤️ using Arc Network + Circle AppKit.
+Users are responsible for reviewing transactions before signing and for managing their own wallets and funds.
