@@ -312,7 +312,7 @@ export default function LandingPage() {
               color: '#FFB347',
               bg: '#FFF7ED',
               title: 'On-chain Points',
-              desc: 'Check in daily, build streaks, and earn points stored permanently on Arc. Your balance reappears whenever you reconnect your wallet — on any device.',
+              desc: 'Check in daily, build streaks, and earn points stored permanently on Arc.',
               shape: <Geo.Plus color="#FFB347" className="absolute top-3 right-3 w-6 h-6 opacity-20" />,
             },
             {
