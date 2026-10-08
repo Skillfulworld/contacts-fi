@@ -5,7 +5,7 @@ import { ArrowLeft, Wallet, Network, Package, Copy, Check, Edit2, Save, Loader2 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Avatar } from '@/components/ui';
 import { useWallet } from '@/context/WalletContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ProfilePage() {
   const { walletAddress, walletName, chainId } = useWallet();

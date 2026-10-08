@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, ReceiptText, FileDown, Loader2, RefreshCw, ExternalLink } from 'lucide-react';
+import { Search, ReceiptText, Loader2, RefreshCw, ExternalLink } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { useWallet } from '@/context/WalletContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 
 type TxType = 'send' | 'swap' | 'bridge' | 'checkin' | 'receive' | string;
 

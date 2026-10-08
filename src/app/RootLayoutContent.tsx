@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import { BottomNavigation, DesktopTopNav, WalletHeader, BrandLogo } from "@/components/ui";
 import { ContactProvider } from "@/context/ContactContext";
 import { WalletProvider } from "@/context/WalletContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -10,6 +11,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
 
   return (
     <WalletProvider>
+      <AuthProvider>
       <ContactProvider>
         {/* Desktop top nav — hidden on mobile */}
         {!isLanding && <DesktopTopNav />}
@@ -33,6 +35,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
           </main>
         )}
       </ContactProvider>
+      </AuthProvider>
     </WalletProvider>
   );
 }
