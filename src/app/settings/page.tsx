@@ -39,7 +39,7 @@ export default function SettingsPage() {
 
   return (
     <PageLayout brandSide="left">
-    <div className="bg-[var(--md-sys-color-background)] p-4 pb-24">
+    <div className="bg-[var(--md-sys-color-background)] p-4 pb-28">
       <div className="py-6">
         <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Settings</h1>
       </div>

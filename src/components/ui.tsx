@@ -437,18 +437,18 @@ export const BottomNavigation = () => {
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#334155] bg-[#1E293B] px-4 py-2 shadow-[0_-10px_24px_rgba(15,23,42,0.24)] backdrop-blur">
+    <div className="lg:hidden fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-[#334155] bg-[#1E293B] px-1 py-1.5 shadow-[0_-10px_24px_rgba(15,23,42,0.24)] backdrop-blur">
       {links.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href;
         return (
-          <Link key={href} href={href} className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-all duration-200 ${isActive ? 'bg-[#6F3FF5]/15 text-[#6F3FF5]' : 'text-[#F1F5F9] hover:bg-[#334155] hover:text-white'}`}>
-            <div className={`relative rounded-full p-2 ${isActive ? 'bg-[#6F3FF5]/20 shadow-sm' : ''}`}>
-              <Icon className="h-5 w-5" />
+          <Link key={href} href={href} className={`flex flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 transition-all duration-200 min-w-0 flex-1 ${isActive ? 'text-[#6F3FF5]' : 'text-[#94A3B8] hover:text-white'}`}>
+            <div className={`relative rounded-full p-1.5 ${isActive ? 'bg-[#6F3FF5]/20 shadow-sm' : ''}`}>
+              <Icon className="h-[18px] w-[18px]" />
               {href === '/points' && isCheckInAvailable && (
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#D64545]" />
+                <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-[#D64545]" />
               )}
             </div>
-            <span className="text-[10px] font-semibold">{label}</span>
+            <span className="text-[9px] font-semibold truncate w-full text-center">{label}</span>
           </Link>
         );
       })}

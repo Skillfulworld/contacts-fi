@@ -2,81 +2,77 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Wallet, Copy, Check, Edit2, Save, Loader2, Camera } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Wallet, Copy, Check, Edit2, Save, Camera } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui';
 import { useWallet } from '@/context/WalletContext';
-import { useAuth } from '@/context/AuthContext';
+
+const PROFILE_KEY = 'settlex_profile';
+
+interface LocalProfile {
+  username: string;
+  avatar: string | null;
+}
+
+function loadProfile(wallet: string | null): LocalProfile {
+  if (typeof window === 'undefined' || !wallet) return { username: '', avatar: null };
+  try {
+    const raw = localStorage.getItem(`${PROFILE_KEY}_${wallet.toLowerCase()}`);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { username: '', avatar: null };
+}
+
+function saveProfile(wallet: string, profile: LocalProfile) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`${PROFILE_KEY}_${wallet.toLowerCase()}`, JSON.stringify(profile));
+}
 
 export default function ProfilePage() {
   const router = useRouter();
   const { walletAddress, walletName } = useWallet();
-  const { authHeaders, sessionToken } = useAuth();
 
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Single username field + avatar only
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load profile from Supabase once we have a session
-  const loadProfile = useCallback(async () => {
-    if (!sessionToken) return;
-    setIsLoadingProfile(true);
-    try {
-      const res = await fetch('/api/profile', { headers: authHeaders });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.username) setUsername(data.username);
-        if (data.avatar_url) setAvatar(data.avatar_url);
-      }
-    } catch (err) {
-      console.error('Profile load error', err);
-    } finally {
-      setIsLoadingProfile(false);
-    }
-  }, [sessionToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Load from localStorage on mount / wallet change
+  useEffect(() => {
+    const p = loadProfile(walletAddress);
+    setUsername(p.username);
+    setAvatar(p.avatar);
+  }, [walletAddress]);
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
-
-  const handleSave = async () => {
-    // No sign prompt — if no session just save what we can locally and skip API
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      if (sessionToken) {
-        const res = await fetch('/api/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({
-            username: username.replace(/^@/, ''),
-            avatar_url: avatar ?? undefined,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error ?? 'Save failed');
-        }
-      }
-      setIsEditing(false);
-      router.push('/settings');
-    } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save');
-    } finally {
-      setIsSaving(false);
+  const handleSave = () => {
+    if (walletAddress) {
+      saveProfile(walletAddress, { username: username.replace(/^@/, ''), avatar });
     }
+    setIsEditing(false);
+    router.push('/settings');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Resize to max 256×256 before storing to keep localStorage lean
     const reader = new FileReader();
-    reader.onloadend = () => setAvatar(reader.result as string);
+    reader.onloadend = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const scale = Math.max(size / img.width, size / img.height);
+        const x = (size - img.width * scale) / 2;
+        const y = (size - img.height * scale) / 2;
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        setAvatar(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = reader.result as string;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -89,14 +85,13 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
   };
 
+  const displayName = username ? (username.startsWith('@') ? username : `@${username}`) : null;
   const initials = username
     ? username.replace(/^@/, '').slice(0, 2).toUpperCase()
-    : walletAddress
-      ? walletAddress.slice(2, 4).toUpperCase()
-      : 'SX';
+    : walletAddress ? walletAddress.slice(2, 4).toUpperCase() : 'SX';
 
   return (
-    <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-24">
+    <div className="min-h-screen bg-[var(--md-sys-color-background)] p-4 pb-28">
       <div className="py-4 max-w-md mx-auto">
 
         {/* Header */}
@@ -110,93 +105,75 @@ export default function ProfilePage() {
           </Link>
           <button
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#1C1C1E] shadow-sm disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#1C1C1E] shadow-sm"
           >
-            {isSaving
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
-              : isEditing
+            {isEditing
               ? <><Save className="h-4 w-4" /> Save</>
               : <><Edit2 className="h-4 w-4" /> Edit Profile</>
             }
           </button>
         </div>
 
-        {saveError && (
-          <div className="mb-4 rounded-2xl bg-red-50 border border-red-100 px-4 py-3">
-            <p className="text-sm text-red-600">{saveError}</p>
-          </div>
-        )}
-
         <div className="rounded-[32px] border border-[#E5E7EB] bg-white p-6 shadow-[0_8px_24px_rgba(17,24,39,0.06)] space-y-6">
-          {isLoadingProfile ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" />
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="relative cursor-pointer"
+              onClick={() => isEditing && fileInputRef.current?.click()}
+            >
+              {avatar
+                ? <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover ring-4 ring-[#EFF6FF]" />
+                : <Avatar initials={initials} color="#3B82F6" size="xl" />
+              }
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white">
+                  <Camera className="w-6 h-6" />
+                </div>
+              )}
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
             </div>
-          ) : (
-            <>
-              {/* Avatar */}
-              <div className="flex flex-col items-center gap-4">
-                <div
-                  className="relative cursor-pointer"
-                  onClick={() => isEditing && fileInputRef.current?.click()}
+
+            {isEditing ? (
+              <div className="w-full">
+                <label className="block text-xs font-semibold text-[#6B7280] mb-1">Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="e.g. alice"
+                  className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 text-base font-semibold text-[#1C1C1E] outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                />
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#1C1C1E]">
+                  {displayName ?? 'Set a username'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Wallet info */}
+          <div className="rounded-[20px] border border-[#E5E7EB] bg-[#F5F6F8] p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#6B7280]">
+              <Wallet className="h-4 w-4" />
+              Connected Wallet
+            </div>
+            <p className="font-semibold text-[#1C1C1E]">{walletName || 'MetaMask'}</p>
+            <div className="flex items-center gap-2">
+              <span className="break-all text-sm text-[#6B7280] flex-1">
+                {walletAddress || 'Not connected'}
+              </span>
+              {walletAddress && (
+                <button
+                  onClick={handleCopy}
+                  className="shrink-0 rounded-full border border-[#E5E7EB] bg-white p-1.5 text-[#3B82F6]"
                 >
-                  {avatar
-                    ? <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover ring-4 ring-[#EFF6FF]" />
-                    : <Avatar initials={initials} color="#3B82F6" size="lg" />
-                  }
-                  {isEditing && (
-                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white">
-                      <Camera className="w-6 h-6" />
-                    </div>
-                  )}
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-                </div>
-
-                {/* Username — display or edit */}
-                {isEditing ? (
-                  <div className="w-full">
-                    <label className="block text-xs font-semibold text-[#6B7280] mb-1">Username</label>
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      placeholder="e.g. alice or @alice"
-                      className="w-full rounded-xl border border-[#E5E7EB] px-4 py-3 text-base font-semibold text-[#1C1C1E] outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-xl font-bold text-[#1C1C1E]">
-                      {username ? (username.startsWith('@') ? username : `@${username}`) : 'Set a username'}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Wallet info */}
-              <div className="rounded-[20px] border border-[#E5E7EB] bg-[#F5F6F8] p-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#6B7280]">
-                  <Wallet className="h-4 w-4" />
-                  Connected Wallet
-                </div>
-                <p className="font-semibold text-[#1C1C1E]">{walletName || 'MetaMask'}</p>
-                <div className="flex items-center gap-2">
-                  <span className="break-all text-sm text-[#6B7280] flex-1">
-                    {walletAddress || 'Not connected'}
-                  </span>
-                  {walletAddress && (
-                    <button
-                      onClick={handleCopy}
-                      className="shrink-0 rounded-full border border-[#E5E7EB] bg-white p-1.5 text-[#3B82F6]"
-                    >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

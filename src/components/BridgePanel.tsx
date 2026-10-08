@@ -89,7 +89,7 @@ function ChainDropdown({
           type="button"
           disabled={disabled}
           onClick={() => setOpen(o => !o)}
-          className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-2.5 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
+          className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-3 py-2 text-sm font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
         >
           <span className="flex items-center gap-2.5">
             <img src={selected.logo} alt={selected.label} className="h-6 w-6 rounded-full object-cover bg-[#EDEBFF]" />
@@ -414,9 +414,9 @@ export default function BridgePanel() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Main card */}
-      <div className="rounded-3xl bg-white p-3 lg:p-4 shadow-sm space-y-2">
+      <div className="rounded-3xl bg-white p-2.5 lg:p-4 shadow-sm space-y-1.5">
 
         {/* Chain selectors */}
         <ChainDropdown label="From" value={srcChain} onChange={v => { setSrcChain(v); }} exclude={dstChain} disabled={busy} />
@@ -458,7 +458,7 @@ export default function BridgePanel() {
               const v = e.target.value.replace(/[^0-9.]/g, '');
               if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
             }}
-            className="w-full bg-transparent text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+            className="w-full bg-transparent text-2xl lg:text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
             style={{ letterSpacing: '-0.02em' }}
           />
         </div>
@@ -479,7 +479,7 @@ export default function BridgePanel() {
         {/* Amount received estimate */}
         <div className="space-y-1">
           <span className="text-sm font-medium text-[#6B7280]">You Receive (est.)</span>
-          <div className="text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+          <div className="text-2xl lg:text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
             {amount && parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : '0.00'}
           </div>
           <p className="text-xs text-[#9CA3AF]">USDC · 1:1 minus CCTP fees (~8-20s fast mode)</p>
@@ -525,23 +525,23 @@ export default function BridgePanel() {
       )}
 
       {/* CTA */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {!isConnected ? (
             <button
               onClick={() => connectWallet()}
-              className="w-full rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm"
+              className="w-full rounded-2xl bg-[#6D5DF6] py-3 text-sm font-semibold text-white shadow-sm"
             >
               Connect Wallet
             </button>
           ) : uiStep === 'bridging' ? (
-            <button disabled className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm opacity-70">
+            <button disabled className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#6D5DF6] py-3 text-sm font-semibold text-white shadow-sm opacity-70">
               <Loader2 className="h-4 w-4 animate-spin" /> Bridging…
             </button>
           ) : (
             <button
               onClick={handleBridge}
               disabled={!amount || parseFloat(amount) <= 0 || srcChain === dstChain}
-              className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#6D5DF6] py-4 text-base font-semibold text-white shadow-sm disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#6D5DF6] py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-40"
             >
               <RefreshCw className="h-4 w-4" />
               Bridge {amount || '0'} USDC · {srcConfig.label} → {dstConfig.label}

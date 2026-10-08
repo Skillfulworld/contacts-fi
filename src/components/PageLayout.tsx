@@ -34,7 +34,7 @@ export default function PageLayout({ children, brandSide = 'left', swapMode, ful
   }
 
   const appCol = (
-    <div className="w-full lg:w-[480px] lg:shrink-0 flex flex-col lg:h-[calc(100dvh-65px)] lg:overflow-y-auto pb-24 lg:pb-0">
+    <div className="w-full lg:w-[480px] lg:shrink-0 flex flex-col lg:h-[calc(100dvh-65px)] lg:overflow-y-auto pb-28 lg:pb-0">
       {children}
     </div>
   );
