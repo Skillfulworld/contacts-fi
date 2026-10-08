@@ -115,10 +115,13 @@ export const PageBrandPanel = ({ swapMode }: { swapMode?: 'swap' | 'bridge' }) =
 export const WalletHeader = () => {
   const { isConnected, isConnecting, walletAddress, walletName, chainId, connectWallet, disconnectWallet, switchToArcMainnet } = useWallet();
   const { isCheckInAvailable } = usePoints();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
+  // On the swap page, the user may intentionally be on another chain for bridge — don't nag them
+  const suppressWrongNetwork = pathname.startsWith('/swap');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -187,9 +190,10 @@ export const WalletHeader = () => {
 
         {menuOpen && (
           <div className="absolute right-0 top-14 z-50 w-56 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2 shadow-[0_14px_36px_rgba(17,24,39,0.12)]">
-              {isArcMainnet ? (
+            {/* Network badge — suppress wrong-network warning on swap/bridge page */}
+            {isArcMainnet || suppressWrongNetwork ? (
               <div className="mb-2 px-2 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-                🟣 Arc Mainnet
+                {isArcMainnet ? '🟣 Arc Mainnet' : `⛓ ${getChainDisplayName(chainId)}`}
               </div>
             ) : (
               <button
@@ -199,9 +203,6 @@ export const WalletHeader = () => {
                 🔴 Wrong Network — {getChainDisplayName(chainId)} · Tap to switch
               </button>
             )}
-            <div className="mb-2 px-2 text-sm font-medium text-[#1C1C1E]">
-              {isArcMainnet ? 'Connected to Arc Mainnet' : 'Switch to Arc Mainnet'}
-            </div>
             <div className="mb-2 break-all px-2 text-xs text-[#6B7280]">
               {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connected'}
             </div>
@@ -209,7 +210,7 @@ export const WalletHeader = () => {
               <Copy className="h-4 w-4" />
               Copy Address
             </button>
-            {!isArcMainnet && (
+            {!isArcMainnet && !suppressWrongNetwork && (
               <button onClick={handleSwitchNetwork} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#6D5DF6] hover:bg-[#EDEBFF]">
                 <Wallet className="h-4 w-4" />
                 Switch to Arc Mainnet
