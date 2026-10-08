@@ -187,11 +187,20 @@ export const WalletHeader = () => {
 
         {menuOpen && (
           <div className="absolute right-0 top-14 z-50 w-56 rounded-2xl border border-[#E5E7EB] bg-[#F5F6F8] p-2 shadow-[0_14px_36px_rgba(17,24,39,0.12)]">
-            <div className="mb-2 px-2 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
-              {isArcMainnet ? '🟣 Arc Mainnet' : '🔴 Wrong Network'}
-            </div>
+              {isArcMainnet ? (
+              <div className="mb-2 px-2 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">
+                🟣 Arc Mainnet
+              </div>
+            ) : (
+              <button
+                onClick={handleSwitchNetwork}
+                className="mb-2 flex w-full items-center gap-1.5 rounded-xl bg-[#FDECEC] px-2 py-1.5 text-xs font-semibold text-[#D64545] hover:bg-[#F9D7D7] transition-colors"
+              >
+                🔴 Wrong Network — {getChainDisplayName(chainId)} · Tap to switch
+              </button>
+            )}
             <div className="mb-2 px-2 text-sm font-medium text-[#1C1C1E]">
-              {isArcMainnet ? 'Connected' : `Current Chain: ${getChainDisplayName(chainId)}`}
+              {isArcMainnet ? 'Connected to Arc Mainnet' : 'Switch to Arc Mainnet'}
             </div>
             <div className="mb-2 break-all px-2 text-xs text-[#6B7280]">
               {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connected'}

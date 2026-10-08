@@ -61,10 +61,29 @@ export const isArcMainnetChainId = (value?: string | null) => {
 /** @deprecated use isArcMainnetChainId */
 export const isArcTestnetChainId = isArcMainnetChainId;
 
+const CHAIN_NAMES: Record<string, string> = {
+  '0x1':     'Ethereum',
+  '1':       'Ethereum',
+  '0x89':    'Polygon',
+  '137':     'Polygon',
+  '0xa':     'Optimism',
+  '10':      'Optimism',
+  '0xa4b1':  'Arbitrum One',
+  '42161':   'Arbitrum One',
+  '0x2105':  'Base',
+  '8453':    'Base',
+  '0xa86a':  'Avalanche',
+  '43114':   'Avalanche',
+  '0xaa36a7':'Sepolia',
+  '11155111':'Sepolia',
+  '0x13b2':  'Arc Mainnet',
+  '5042':    'Arc Mainnet',
+};
+
 export const getChainDisplayName = (value?: string | null) => {
-  if (isArcMainnetChainId(value)) return 'Arc Mainnet';
   if (!value) return 'Unknown Chain';
-  return `Chain ${value}`;
+  const normalized = value.trim().toLowerCase();
+  return CHAIN_NAMES[normalized] ?? CHAIN_NAMES[value.trim()] ?? `Chain ${value}`;
 };
 
 let appKitInstance: AppKit | null = null;
@@ -198,6 +217,24 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       setIsConnecting(false);
     }
   };
+
+  // Listen for chain changes from MetaMask
+  useEffect(() => {
+    if (!walletProvider) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const provider = walletProvider as any;
+    const handleChainChanged = (newChainId: string) => {
+      setChainId(String(newChainId));
+    };
+    if (typeof provider.on === 'function') {
+      provider.on('chainChanged', handleChainChanged);
+    }
+    return () => {
+      if (typeof provider.removeListener === 'function') {
+        provider.removeListener('chainChanged', handleChainChanged);
+      }
+    };
+  }, [walletProvider]);
 
   const disconnectWallet = () => {
     setAdapter(null);

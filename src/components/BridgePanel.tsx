@@ -89,7 +89,7 @@ function ChainDropdown({
           type="button"
           disabled={disabled}
           onClick={() => setOpen(o => !o)}
-          className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-4 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
+          className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-2.5 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
         >
           <span className="flex items-center gap-2.5">
             <img src={selected.logo} alt={selected.label} className="h-6 w-6 rounded-full object-cover bg-[#EDEBFF]" />
@@ -160,7 +160,7 @@ function StepRow({ step, destExplorer, srcExplorer }: { step: StepStatus; destEx
 
 // ─── Main component ────────────────────────────────────────────────────────
 export default function BridgePanel() {
-  const { walletProvider, walletAddress, isConnected, connectWallet, switchToArcMainnet, chainId } = useWallet();
+  const { walletProvider, walletAddress, isConnected, connectWallet, switchToArcMainnet, chainId, refreshChain } = useWallet();
 
   const [srcChain,  setSrcChain]  = useState<ChainKey>('Arc');
   const [dstChain,  setDstChain]  = useState<ChainKey>('Base');
@@ -225,7 +225,7 @@ export default function BridgePanel() {
     setAmount('');
   };
 
-  // Switch wallet to source chain using EIP-3326/EIP-3085
+  // Switch wallet to source chain using EIP-3326/EIP-3085, then refresh chainId in context
   const switchToSrcChain = async (): Promise<boolean> => {
     if (!walletProvider?.request) return false;
     try {
@@ -233,9 +233,9 @@ export default function BridgePanel() {
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: hexSrcId }],
       });
+      await refreshChain();
       return true;
     } catch (switchErr: unknown) {
-      // Chain not added to wallet — add it
       if ((switchErr as { code?: number })?.code === 4902) {
         try {
           await walletProvider.request({
@@ -252,6 +252,7 @@ export default function BridgePanel() {
               blockExplorerUrls: [srcConfig.explorer],
             }],
           });
+          await refreshChain();
           return true;
         } catch { return false; }
       }
@@ -415,7 +416,7 @@ export default function BridgePanel() {
   return (
     <div className="space-y-4">
       {/* Main card */}
-      <div className="rounded-3xl bg-white p-4 lg:p-5 shadow-sm space-y-3">
+      <div className="rounded-3xl bg-white p-3 lg:p-4 shadow-sm space-y-2">
 
         {/* Chain selectors */}
         <ChainDropdown label="From" value={srcChain} onChange={v => { setSrcChain(v); }} exclude={dstChain} disabled={busy} />
@@ -457,19 +458,19 @@ export default function BridgePanel() {
               const v = e.target.value.replace(/[^0-9.]/g, '');
               if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
             }}
-            className="w-full bg-transparent text-4xl lg:text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+            className="w-full bg-transparent text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
             style={{ letterSpacing: '-0.02em' }}
           />
         </div>
 
         {/* Flip button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center py-0">
           <button
             onClick={handleFlip}
             disabled={busy}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F0F1F5] text-[#6D5DF6] transition-colors hover:bg-[#EDEBFF] disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0F1F5] text-[#6D5DF6] transition-colors hover:bg-[#EDEBFF] disabled:opacity-40"
           >
-            <ArrowDown className="h-5 w-5" />
+            <ArrowDown className="h-4 w-4" />
           </button>
         </div>
 
@@ -478,7 +479,7 @@ export default function BridgePanel() {
         {/* Amount received estimate */}
         <div className="space-y-1">
           <span className="text-sm font-medium text-[#6B7280]">You Receive (est.)</span>
-          <div className="text-4xl lg:text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+          <div className="text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
             {amount && parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : '0.00'}
           </div>
           <p className="text-xs text-[#9CA3AF]">USDC · 1:1 minus CCTP fees (~8-20s fast mode)</p>

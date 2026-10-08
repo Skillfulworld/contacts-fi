@@ -94,7 +94,7 @@ function TokenDropdown({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-4 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
+        className="flex w-full items-center justify-between rounded-2xl bg-[#F2F3F5] px-4 py-2.5 text-base font-semibold text-[#1C1C1E] transition-colors hover:bg-[#E8E9EC] disabled:opacity-50"
       >
         <span>{value}</span>
         <ChevronDown className={`h-4 w-4 text-[#6B7280] transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -356,7 +356,7 @@ export default function SwapPage() {
 
         {/* Main swap card */}
         {step !== 'success' && (
-          <div className="rounded-3xl bg-white p-4 lg:p-5 shadow-sm space-y-1">
+          <div className="rounded-3xl bg-white p-3 lg:p-4 shadow-sm space-y-1">
 
             {/* You Pay */}
             <div className="space-y-2">
@@ -384,27 +384,27 @@ export default function SwapPage() {
                     if (step === 'quoted') setStep('idle');
                   }
                 }}
-                className="w-full bg-transparent text-4xl lg:text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+                className="w-full bg-transparent text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
                 style={{ letterSpacing: '-0.02em' }}
               />
               <TokenDropdown value={tokenIn} onChange={v => { setTokenIn(v); setQuote(null); setStep('idle'); }} exclude={tokenOut} disabled={busy} />
             </div>
 
             {/* Flip arrow */}
-            <div className="flex justify-center py-2">
+            <div className="flex justify-center py-0.5">
               <button
                 onClick={handleFlip}
                 disabled={busy}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F0F1F5] text-[#6D5DF6] transition-colors hover:bg-[#EDEBFF] disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0F1F5] text-[#6D5DF6] transition-colors hover:bg-[#EDEBFF] disabled:opacity-40"
               >
-                <ArrowDown className="h-5 w-5" />
+                <ArrowDown className="h-4 w-4" />
               </button>
             </div>
 
             {/* You Receive */}
             <div className="space-y-2">
               <span className="text-sm font-medium text-[#6B7280]">You Receive</span>
-              <div className="text-4xl lg:text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+              <div className="text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
                 {quote ? fmt(quote.amountOut, quote.outDecimals) : '0.00'}
               </div>
               <TokenDropdown value={tokenOut} onChange={v => { setTokenOut(v); setQuote(null); setStep('idle'); }} exclude={tokenIn} disabled={busy} />
