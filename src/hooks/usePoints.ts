@@ -137,9 +137,9 @@ async function ethCall(to: string, data: string): Promise<string> {
 function encodeSelector(sig: string): string {
   // keccak256 first 4 bytes — we precompute for our specific functions
   const selectors: Record<string, string> = {
-    'getUserRecord(address)': '0x3e6f7439',
-    'canCheckIn(address)':    '0x0bf1cab2',
-    'checkInFee()':           '0x92c38bdd',
+    'getUserRecord(address)': '0x67e2efc6',
+    'canCheckIn(address)':    '0xfb896848',
+    'checkInFee()':           '0x9aff62aa',
     'checkIn()':              '0x183ff085',
     'allowance(address,address)': '0xdd62ed3e',
     'approve(address,uint256)':   '0x095ea7b3',

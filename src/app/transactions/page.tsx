@@ -49,7 +49,7 @@ function formatAmount(amount: string, symbol: string) {
 
 export default function TransactionsHistoryPage() {
   const { walletAddress, isConnected } = useWallet();
-  const { authHeaders, isSignedIn } = useAuth();
+  const { authHeaders, isSignedIn, sessionToken } = useAuth();
 
   const [transactions, setTransactions] = useState<OnchainTx[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,8 +58,11 @@ export default function TransactionsHistoryPage() {
 
   const filters = ['All', 'Sent', 'Received', 'Swap', 'Bridge', 'Check-in'];
 
+  // Use sessionToken directly to avoid race with isConnected settling
+  const hasSession = Boolean(sessionToken);
+
   const load = useCallback(async () => {
-    if (!isSignedIn) return;
+    if (!hasSession) return;
     setIsLoading(true);
     try {
       const typeMap: Record<string, string> = {
@@ -76,7 +79,7 @@ export default function TransactionsHistoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, filter, authHeaders]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSession, filter, authHeaders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
 
@@ -94,7 +97,7 @@ export default function TransactionsHistoryPage() {
       <div className="bg-[var(--md-sys-color-background)] p-4 pb-24">
         <div className="flex items-center justify-between py-6">
           <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)]">Activity</h1>
-          {isSignedIn && (
+          {hasSession && (
             <button
               onClick={load}
               disabled={isLoading}
@@ -106,8 +109,8 @@ export default function TransactionsHistoryPage() {
           )}
         </div>
 
-        {/* Not signed in */}
-        {!isConnected && (
+        {/* Not connected and no session */}
+        {!isConnected && !hasSession && (
           <div className="flex flex-col items-center justify-center rounded-[28px] border border-[#E5E7EB] bg-white py-16 text-center shadow-sm">
             <ReceiptText className="h-10 w-10 text-[#E5E7EB] mb-3" />
             <p className="font-semibold text-[#1C1C1E]">Connect your wallet</p>
@@ -115,15 +118,7 @@ export default function TransactionsHistoryPage() {
           </div>
         )}
 
-        {isConnected && !isSignedIn && (
-          <div className="flex flex-col items-center justify-center rounded-[28px] border border-[#E5E7EB] bg-white py-16 text-center shadow-sm">
-            <ReceiptText className="h-10 w-10 text-[#3B82F6] mb-3" />
-            <p className="font-semibold text-[#1C1C1E]">Sign in to view activity</p>
-            <p className="text-sm text-[#6B7280] mt-1">Sign in with your wallet to load your transaction history.</p>
-          </div>
-        )}
-
-        {isSignedIn && (
+        {hasSession && (
           <>
             <div className="mb-5 flex items-center gap-3 rounded-[20px] border border-[#E5E7EB] bg-white px-4 py-3 shadow-[0_6px_18px_rgba(17,24,39,0.04)]">
               <Search className="h-5 w-5 text-[#6B7280]" />
