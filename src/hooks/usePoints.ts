@@ -190,7 +190,7 @@ async function readAllowance(owner: string): Promise<bigint> {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function usePoints() {
-  const { walletAddress, walletProvider, isConnected } = useWallet();
+  const { walletAddress, walletProvider, isConnected, chainId, switchToArcMainnet } = useWallet();
 
   const [record, setRecord] = useState<OnChainRecord | null>(null);
   const [canCheckInNow, setCanCheckInNow] = useState(false);
@@ -198,6 +198,11 @@ export function usePoints() {
   const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>('idle');
   const [checkInError, setCheckInError] = useState<string | null>(null);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+  const [needsChainSwitch, setNeedsChainSwitch] = useState(false);
+
+  // Derived: is wallet on Arc Mainnet?
+  const isOnArcMainnet = chainId != null &&
+    (chainId.toLowerCase() === '0x13b2' || chainId === '5042');
 
   // Load on-chain state when wallet connects
   const refresh = useCallback(async () => {
@@ -237,8 +242,21 @@ export function usePoints() {
 
     setCheckInStatus('loading');
     setCheckInError(null);
+    setNeedsChainSwitch(false);
 
     try {
+      // Step 0 — Ensure wallet is on Arc Mainnet
+      if (!isOnArcMainnet) {
+        setNeedsChainSwitch(true);
+        const result = await switchToArcMainnet();
+        if (!result.ok) {
+          setCheckInStatus('error');
+          setCheckInError('Please switch to Arc Mainnet to check in.');
+          return;
+        }
+        setNeedsChainSwitch(false);
+      }
+
       // Step 1 — Check allowance
       const allowance = await readAllowance(walletAddress);
       if (allowance < CHECK_IN_FEE) {
@@ -246,16 +264,19 @@ export function usePoints() {
         // Approve a large amount so user doesn't need to approve every day
         // 365 days × 0.01 USDC = 3.65 USDC (3650000 in 6 decimals)
         const approveAmount = BigInt(3650000);
-        const approveData = encodeSelector('approve(address,uint256)') +
+        // encodeSelector already returns '0x...' — concatenate raw hex without extra '0x'
+        const approveSelector = encodeSelector('approve(address,uint256)'); // '0x095ea7b3'
+        const approveData = approveSelector +
           encodeAddress(SETTLEX_POINTS_ADDRESS) +
           encodeUint256(approveAmount);
+        // approveData is already '0x...' — pass directly, no extra '0x' prefix
 
         const approveTx = await walletProvider.request({
           method: 'eth_sendTransaction',
           params: [{
             from: walletAddress,
             to: USDC_ADDRESS,
-            data: '0x' + approveData,
+            data: approveData,
           }],
         }) as string;
 
@@ -264,8 +285,9 @@ export function usePoints() {
       }
 
       // Step 2 — Call checkIn()
+      // encodeSelector returns '0x183ff085' — pass directly, no extra '0x' prefix
       setCheckInStatus('confirming');
-      const checkInData = encodeSelector('checkIn()');
+      const checkInData = encodeSelector('checkIn()'); // already '0x...'
       const txHash = await walletProvider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -296,7 +318,7 @@ export function usePoints() {
       }
       console.error('checkIn error', err);
     }
-  }, [walletAddress, walletProvider, canCheckInNow, refresh]);
+  }, [walletAddress, walletProvider, canCheckInNow, isOnArcMainnet, switchToArcMainnet, refresh]);
 
   // Derived from on-chain record — same shape as old hook so UI components don't change
   const total              = record?.totalPoints ?? 0;
@@ -342,6 +364,8 @@ export function usePoints() {
     checkInError,
     lastTxHash,
     refresh,
+    isOnArcMainnet,
+    needsChainSwitch,
     // Legacy
     awardTaskPoints: () => {},
   };

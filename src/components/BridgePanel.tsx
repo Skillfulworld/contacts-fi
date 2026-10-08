@@ -7,10 +7,10 @@
  * Supported chains sourced from Circle/Arc official documentation (2026-09-22).
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowDown, ChevronDown, CheckCircle2, ExternalLink,
-  Copy, AlertCircle, Loader2, RefreshCw,
+  Copy, AlertCircle, Loader2, RefreshCw, Zap,
 } from 'lucide-react';
 import { AppKit } from '@circle-fin/app-kit';
 import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2';
@@ -169,6 +169,7 @@ export default function BridgePanel() {
   const [steps,     setSteps]     = useState<StepStatus[]>([]);
   const [errMsg,    setErrMsg]    = useState<string | null>(null);
   const [copied,    setCopied]    = useState(false);
+  const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
 
   // Track whether wallet is on the selected source chain
   const srcConfig  = BRIDGE_CHAINS.find(c => c.chain === srcChain)!;
@@ -179,6 +180,31 @@ export default function BridgePanel() {
     chainId.toLowerCase() === hexSrcId.toLowerCase()
   );
   const busy = uiStep === 'bridging';
+
+  // Fetch USDC balance on source chain (Arc only — other chains not supported via this RPC)
+  const fetchBalance = useCallback(async () => {
+    if (!walletAddress || !isConnected) { setUsdcBalance(null); return; }
+    if (srcChain !== 'Arc') { setUsdcBalance(null); return; }
+    try {
+      const ARC_USDC = '0x3600000000000000000000000000000000000000';
+      const data = '0x70a08231' + walletAddress.replace('0x', '').padStart(64, '0');
+      const res = await fetch('https://rpc.mainnet.arc.io', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: ARC_USDC, data }, 'latest'] }),
+      });
+      const json = await res.json();
+      if (json.result && json.result !== '0x') {
+        const raw = BigInt(json.result);
+        const formatted = (Number(raw) / 1e6).toFixed(2);
+        setUsdcBalance(formatted);
+      } else {
+        setUsdcBalance('0.00');
+      }
+    } catch { setUsdcBalance(null); }
+  }, [walletAddress, isConnected, srcChain]);
+
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
   // Reset steps when chains change
   useEffect(() => {
@@ -394,11 +420,33 @@ export default function BridgePanel() {
         {/* Chain selectors */}
         <ChainDropdown label="From" value={srcChain} onChange={v => { setSrcChain(v); }} exclude={dstChain} disabled={busy} />
 
+        {/* Switch Network — compact inline button, only shown when on wrong chain */}
+        {isConnected && !isOnSrc && uiStep !== 'bridging' && (
+          <button
+            onClick={switchToSrcChain}
+            className="flex w-full items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 hover:bg-amber-100 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 shrink-0" />
+              Wrong network — switch to {srcConfig.label}
+            </span>
+            <span className="shrink-0 rounded-lg bg-[#6D5DF6] px-2.5 py-1 text-[11px] font-semibold text-white">Switch</span>
+          </button>
+        )}
+
         {/* Amount input */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[#6B7280]">You Send</span>
-            <span className="text-xs text-[#9CA3AF]">USDC</span>
+            {isConnected && usdcBalance !== null && (
+              <button
+                className="text-xs font-semibold text-[#6D5DF6]"
+                onClick={() => setAmount(usdcBalance)}
+                disabled={busy}
+              >
+                Balance: {usdcBalance} USDC · Max
+              </button>
+            )}
           </div>
           <input
             inputMode="decimal"
@@ -473,17 +521,6 @@ export default function BridgePanel() {
             <button onClick={handleReset} className="mt-1 font-semibold underline">Try again</button>
           </div>
         </div>
-      )}
-
-      {/* Network warning */}
-      {isConnected && !isOnSrc && uiStep !== 'bridging' && (
-        <button
-          onClick={switchToSrcChain}
-          className="flex w-full items-center justify-between rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100 transition-colors"
-        >
-          <span>Wallet is on wrong network — tap to switch to {srcConfig.label}</span>
-          <span className="ml-3 shrink-0 rounded-xl bg-[#6D5DF6] px-3 py-1.5 text-xs font-semibold text-white">Switch Network</span>
-        </button>
       )}
 
       {/* CTA */}
