@@ -23,7 +23,11 @@ export default function ContactsListPage() {
 
   return (
     <PageLayout brandSide="left">
-    <div className="pb-32">
+    <div className="pb-32 relative overflow-hidden">
+      {/* Decorative shapes — contacts page */}
+      <div className="pointer-events-none absolute top-6 right-4 w-16 h-16 rounded-full bg-[#6D5DF6] opacity-10" />
+      <div className="pointer-events-none absolute top-24 right-10 w-7 h-7 rotate-45 bg-[#FF6B6B] opacity-15" />
+      <div className="pointer-events-none absolute top-14 right-24 w-3 h-3 rounded-full bg-[#34D399] opacity-40" />
       <div className="bg-[var(--md-sys-color-background)] px-4 pb-3 pt-4">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>

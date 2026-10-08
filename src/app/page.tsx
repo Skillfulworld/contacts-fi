@@ -49,7 +49,6 @@ export default function LandingPage() {
       {/* Top-left cluster */}
       <Geo.Circle className="absolute top-10 left-6 w-14 h-14 bg-[#6D5DF6] opacity-80" />
       <Geo.Circle className="absolute top-10 left-16 w-14 h-14 bg-[#FF6B6B] opacity-80 -translate-x-4" />
-      <Geo.Ring className="absolute top-32 left-8 w-8 h-8 border-[#FFB347] opacity-60" />
       <Geo.Dot className="absolute top-8 left-36 w-2 h-2 bg-[#4DA3FF] opacity-70" />
       <Geo.Plus color="#6D5DF6" className="absolute top-24 left-40 w-5 h-5 opacity-40" />
 

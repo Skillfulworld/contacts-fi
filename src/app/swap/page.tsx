@@ -284,7 +284,11 @@ export default function SwapPage() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <PageLayout brandSide="left" swapMode={mode}>
-    <div className="bg-[#F0F1F5] px-4 py-3 lg:py-4 pb-28 lg:pb-4" suppressHydrationWarning>
+    <div className="bg-[#F0F1F5] px-4 py-3 lg:py-4 pb-28 lg:pb-4 relative overflow-hidden" suppressHydrationWarning>
+      {/* Decorative shapes — swap page */}
+      <div className="pointer-events-none absolute top-3 right-3 w-12 h-12 rounded-full bg-[#4DA3FF] opacity-10" />
+      <div className="pointer-events-none absolute top-8 right-14 w-4 h-4 rotate-45 bg-[#FFB347] opacity-20" />
+      <div className="pointer-events-none absolute top-20 right-5 w-8 h-8 rounded-full border-2 border-[#6D5DF6] opacity-15" />
       <div className="mx-auto flex max-w-md flex-col gap-4 lg:gap-4">
 
         {/* Swap / Bridge toggle — at the very top so visible without scrolling on mobile */}
