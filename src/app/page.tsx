@@ -86,7 +86,7 @@ export default function LandingPage() {
             <span className="text-[11px] font-semibold tracking-wide text-[#6D5DF6] uppercase">Powered by Arc</span>
           </div>
           <Image
-            src="/branding/settlex-website-header-black.svg"
+            src="/branding/settlex-website-header-black.png"
             alt="Settle Exchange"
             width={160}
             height={32}
@@ -380,7 +380,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center md:items-start gap-3">
             <Image
-              src="/branding/settlex-website-header-black.svg"
+              src="/branding/settlex-website-header-black.png"
               alt="Settle Exchange"
               width={140}
               height={28}

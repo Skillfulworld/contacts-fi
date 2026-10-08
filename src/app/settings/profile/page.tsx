@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Wallet, Copy, Check, Edit2, Save, Camera } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -29,7 +28,6 @@ function saveProfile(wallet: string, profile: LocalProfile) {
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { walletAddress, walletName } = useWallet();
 
   const [copied, setCopied] = useState(false);
@@ -47,10 +45,11 @@ export default function ProfilePage() {
 
   const handleSave = () => {
     if (walletAddress) {
-      saveProfile(walletAddress, { username: username.replace(/^@/, ''), avatar });
+      const clean = username.replace(/^@/, '').trim();
+      saveProfile(walletAddress, { username: clean, avatar });
+      setUsername(clean);
     }
     setIsEditing(false);
-    router.push('/settings');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

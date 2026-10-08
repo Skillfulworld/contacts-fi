@@ -28,13 +28,18 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState({ name: 'My Profile', username: '@username', avatar: null as string | null });
 
   useEffect(() => {
-    if(walletAddress) {
-      setProfile({
-        name: localStorage.getItem(`profile-${walletAddress}-name`) || 'My Profile',
-        username: localStorage.getItem(`profile-${walletAddress}-username`) || '@username',
-        avatar: localStorage.getItem(`profile-${walletAddress}-avatar`) || null,
-      });
-    }
+    if (!walletAddress) return;
+    try {
+      const raw = localStorage.getItem(`settlex_profile_${walletAddress.toLowerCase()}`);
+      if (raw) {
+        const p = JSON.parse(raw);
+        setProfile({
+          name: p.username || 'My Profile',
+          username: p.username ? `@${p.username.replace(/^@/, '')}` : '@username',
+          avatar: p.avatar || null,
+        });
+      }
+    } catch { /* ignore */ }
   }, [walletAddress]);
 
   return (

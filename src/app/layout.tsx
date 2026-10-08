@@ -7,8 +7,27 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-displ
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://contactfi.vercel.app"),
   title: "Settle Exchange",
   description: "Send USDC to anyone on Arc Network. Swap, bridge, and manage your crypto contacts with Settle Exchange.",
+  icons: {
+    icon: [
+      { url: "/branding/settlex-icon.png", type: "image/png" },
+    ],
+    apple: "/branding/settlex-icon.png",
+    shortcut: "/branding/settlex-icon.png",
+  },
+  openGraph: {
+    title: "Settle Exchange",
+    description: "Send USDC to anyone on Arc. Swap, bridge, and manage your crypto contacts.",
+    images: [{ url: "/branding/settlex-og-1200x630.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Settle Exchange",
+    description: "Send USDC to anyone on Arc.",
+    images: ["/branding/settlex-og-1200x630.png"],
+  },
 };
 
 export const viewport: Viewport = {

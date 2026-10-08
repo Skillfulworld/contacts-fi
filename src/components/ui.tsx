@@ -62,13 +62,12 @@ export const Avatar = ({ initials, color, size = 'md' }: { initials: string; col
 export const BrandLogo = ({ dark = false }: { dark?: boolean }) => (
   <Link href="/" className="flex items-center font-semibold transition-colors">
     <Image
-      src="/branding/settlex-website-header-black.svg"
+      src="/branding/settlex-website-header-black.png"
       alt="Settle Exchange"
-      width={120}
-      height={28}
+      width={140}
+      height={32}
       className={`h-7 w-auto object-contain ${dark ? 'brightness-0 invert' : ''}`}
       priority
-      unoptimized
     />
   </Link>
 );
