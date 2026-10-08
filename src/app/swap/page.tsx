@@ -285,14 +285,14 @@ export default function SwapPage() {
   return (
     <PageLayout brandSide="left" swapMode={mode}>
     <div className="bg-[#F0F1F5] px-4 py-3 lg:py-4 pb-28 lg:pb-4 relative overflow-hidden" suppressHydrationWarning>
-      {/* Decorative shapes — swap page */}
-      <div className="pointer-events-none absolute top-3 right-3 w-12 h-12 rounded-full bg-[#4DA3FF] opacity-10" />
-      <div className="pointer-events-none absolute top-8 right-14 w-4 h-4 rotate-45 bg-[#FFB347] opacity-20" />
-      <div className="pointer-events-none absolute top-20 right-5 w-8 h-8 rounded-full border-2 border-[#6D5DF6] opacity-15" />
       <div className="mx-auto flex max-w-md flex-col gap-4 lg:gap-4">
 
-        {/* Swap / Bridge toggle — at the very top so visible without scrolling on mobile */}
-        <div className="flex rounded-2xl bg-white p-1 shadow-sm">
+        {/* Swap / Bridge toggle with decorative shapes alongside the labels */}
+        <div className="relative flex rounded-2xl bg-white p-1 shadow-sm">
+          {/* Shapes float in the top-right corner of the toggle bar */}
+          <div className="pointer-events-none absolute -top-4 -right-2 w-10 h-10 rounded-full bg-[#4DA3FF] opacity-10" />
+          <div className="pointer-events-none absolute -top-2 right-7 w-3 h-3 rotate-45 bg-[#FFB347] opacity-25" />
+          <div className="pointer-events-none absolute -top-6 right-16 w-6 h-6 rounded-full border-2 border-[#6D5DF6] opacity-20" />
           <button
             onClick={() => setMode('swap')}
             className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors ${

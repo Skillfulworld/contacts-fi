@@ -535,16 +535,23 @@ export default function BridgePanel() {
             </button>
           ) : uiStep === 'bridging' ? (
             <button disabled className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#6D5DF6] py-3 text-sm font-semibold text-white shadow-sm opacity-70">
-              <Loader2 className="h-4 w-4 animate-spin" /> Bridging…
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> Bridging…
             </button>
           ) : (
             <button
               onClick={handleBridge}
               disabled={!amount || parseFloat(amount) <= 0 || srcChain === dstChain}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#6D5DF6] py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#6D5DF6] py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-40 overflow-hidden"
             >
-              <RefreshCw className="h-4 w-4" />
-              Bridge {amount || '0'} USDC · {srcConfig.label} → {dstConfig.label}
+              <RefreshCw className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {amount && parseFloat(amount) > 0
+                  ? `Bridge ${amount} USDC`
+                  : 'Bridge USDC'}
+              </span>
+              <span className="shrink-0 text-white/70 text-xs hidden sm:inline">
+                {srcConfig.label} → {dstConfig.label}
+              </span>
             </button>
           )}
         </div>

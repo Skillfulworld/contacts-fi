@@ -23,11 +23,13 @@ export default function SendPage() {
   return (
     <PageLayout brandSide="right">
     <div className="p-4 relative overflow-hidden">
-      {/* Decorative shapes — send page */}
-      <div className="pointer-events-none absolute top-4 right-6 w-20 h-20 rounded-full border-[3px] border-[#FFB347] opacity-20" />
-      <div className="pointer-events-none absolute top-10 right-10 w-5 h-5 rotate-45 bg-[#4DA3FF] opacity-25" />
-      <div className="pointer-events-none absolute top-32 right-4 w-10 h-10 rounded-full bg-[#34D399] opacity-10" />
-      <h1 className="text-2xl font-semibold mb-6">Send USDC</h1>
+      {/* Title with decorative shapes alongside */}
+      <div className="relative inline-block mb-6">
+        <div className="pointer-events-none absolute -top-3 -right-12 w-16 h-16 rounded-full border-[3px] border-[#FFB347] opacity-25" />
+        <div className="pointer-events-none absolute top-1 -right-6 w-4 h-4 rotate-45 bg-[#4DA3FF] opacity-30" />
+        <div className="pointer-events-none absolute -top-1 -right-20 w-8 h-8 rounded-full bg-[#34D399] opacity-12" />
+        <h1 className="text-2xl font-semibold">Send USDC</h1>
+      </div>
 
       <div className="mb-8">
         <h2 className="text-sm font-semibold text-[#6B7280] mb-3">Paste Address</h2>

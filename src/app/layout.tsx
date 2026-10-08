@@ -7,7 +7,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-displ
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://settlex.vercel.app"),
+  metadataBase: new URL("https://settlex-on-arc.vercel.app"),
   title: "Settle Exchange",
   description: "Send USDC to anyone on Arc Network. Swap, bridge, and manage your crypto contacts with Settle Exchange.",
   icons: {

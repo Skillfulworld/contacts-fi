@@ -129,7 +129,7 @@ Settle Exchange connects the two.
 
 ## Links
 
-* **Live App:** https://settlex.vercel.app
+* **Live App:** https://settlex-on-arc.vercel.app
 * **GitHub:** https://github.com/Skillfulworld/settlex
 * **Arc:** https://www.arc.io/
 * **Arc Documentation:** https://docs.arc.io/

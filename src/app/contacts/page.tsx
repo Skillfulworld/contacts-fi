@@ -24,13 +24,13 @@ export default function ContactsListPage() {
   return (
     <PageLayout brandSide="left">
     <div className="pb-32 relative overflow-hidden">
-      {/* Decorative shapes — contacts page */}
-      <div className="pointer-events-none absolute top-6 right-4 w-16 h-16 rounded-full bg-[#6D5DF6] opacity-10" />
-      <div className="pointer-events-none absolute top-24 right-10 w-7 h-7 rotate-45 bg-[#FF6B6B] opacity-15" />
-      <div className="pointer-events-none absolute top-14 right-24 w-3 h-3 rounded-full bg-[#34D399] opacity-40" />
       <div className="bg-[var(--md-sys-color-background)] px-4 pb-3 pt-4">
         <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
+          {/* Title with decorative shapes alongside */}
+          <div className="relative">
+            <div className="pointer-events-none absolute -top-2 -right-10 w-14 h-14 rounded-full bg-[#6D5DF6] opacity-10" />
+            <div className="pointer-events-none absolute top-4 -right-5 w-5 h-5 rotate-45 bg-[#FF6B6B] opacity-20" />
+            <div className="pointer-events-none absolute -top-1 -right-20 w-2.5 h-2.5 rounded-full bg-[#34D399] opacity-50" />
             <h1 className="text-3xl font-semibold text-[var(--md-sys-color-on-background)] mb-1">Contacts</h1>
             <p className="text-[#6B7280]">Your people on Settle Exchange</p>
           </div>
