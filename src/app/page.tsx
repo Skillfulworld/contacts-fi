@@ -142,7 +142,7 @@ export default function LandingPage() {
                 Launch App <ArrowUpRight className="h-4 w-4" />
               </Link>
               <a
-                href="https://github.com/Skillfulworld/contacts-fi"
+                href="https://github.com/Skillfulworld/settlex"
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-full border border-[#E5E7EB] bg-white px-7 py-3.5 font-semibold text-[#1C1C1E] hover:bg-[#F5F6F8] transition-all"
@@ -407,7 +407,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-col items-center md:items-end gap-2 text-sm">
-            <a href="https://github.com/Skillfulworld/contacts-fi" target="_blank" rel="noreferrer" className="text-[#6B7280] hover:text-[#1C1C1E] transition-colors">GitHub</a>
+            <a href="https://github.com/Skillfulworld/settlex" target="_blank" rel="noreferrer" className="text-[#6B7280] hover:text-[#1C1C1E] transition-colors">GitHub</a>
             <a href="https://www.arc.io/" target="_blank" rel="noreferrer" className="text-[#6B7280] hover:text-[#1C1C1E] transition-colors">Arc</a>
             <a href="https://docs.arc.io/" target="_blank" rel="noreferrer" className="text-[#6B7280] hover:text-[#1C1C1E] transition-colors">Arc Docs</a>
             <Link href="/contacts" className="text-[#6D5DF6] font-semibold hover:opacity-80 transition-colors">Launch App →</Link>

@@ -129,8 +129,8 @@ Settle Exchange connects the two.
 
 ## Links
 
-* **Live App:** https://contactfi.vercel.app
-* **GitHub:** https://github.com/Skillfulworld/contacts-fi
+* **Live App:** https://settlex.vercel.app
+* **GitHub:** https://github.com/Skillfulworld/settlex
 * **Arc:** https://www.arc.io/
 * **Arc Documentation:** https://docs.arc.io/
 * **Points Contract:** https://explorer.arc.io/address/0xaf75c1b6EDeE3Cf03FF1282145dD7878EcFfB7B0
