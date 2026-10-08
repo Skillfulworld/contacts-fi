@@ -416,7 +416,7 @@ export default function BridgePanel() {
   return (
     <div className="space-y-2">
       {/* Main card */}
-      <div className="rounded-3xl bg-white p-2.5 lg:p-4 shadow-sm space-y-1.5">
+      <div className="rounded-3xl bg-white p-2.5 lg:p-3 shadow-sm space-y-1.5">
 
         {/* Chain selectors */}
         <ChainDropdown label="From" value={srcChain} onChange={v => { setSrcChain(v); }} exclude={dstChain} disabled={busy} />
@@ -458,7 +458,7 @@ export default function BridgePanel() {
               const v = e.target.value.replace(/[^0-9.]/g, '');
               if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
             }}
-            className="w-full bg-transparent text-2xl lg:text-3xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
+            className="w-full bg-transparent text-2xl font-bold tabular-nums text-[#111827] outline-none placeholder:text-[#D1D5DB] disabled:opacity-50"
             style={{ letterSpacing: '-0.02em' }}
           />
         </div>
@@ -479,29 +479,13 @@ export default function BridgePanel() {
         {/* Amount received estimate */}
         <div className="space-y-1">
           <span className="text-sm font-medium text-[#6B7280]">You Receive (est.)</span>
-          <div className="text-2xl lg:text-3xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
+          <div className="text-2xl font-bold tabular-nums text-[#111827]" style={{ letterSpacing: '-0.02em' }}>
             {amount && parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : '0.00'}
           </div>
           <p className="text-xs text-[#9CA3AF]">USDC · 1:1 minus CCTP fees (~8-20s fast mode)</p>
         </div>
 
-        {/* Route info */}
-        {amount && parseFloat(amount) > 0 && (
-          <div className="rounded-2xl bg-[#F9FAFB] px-4 py-3 space-y-1.5 text-xs text-[#6B7280]">
-            <div className="flex justify-between">
-              <span>Protocol</span>
-              <span className="font-semibold text-[#111827]">Circle CCTP V2</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Transfer speed</span>
-              <span className="font-semibold text-[#111827]">Fast (~8-20 seconds)</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Route</span>
-              <span className="font-semibold text-[#111827]">{srcConfig.label} → {dstConfig.label}</span>
-            </div>
-          </div>
-        )}
+
 
         {/* In-progress step tracker */}
         {steps.length > 0 && uiStep === 'bridging' && (

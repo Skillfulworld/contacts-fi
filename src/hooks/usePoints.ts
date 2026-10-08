@@ -261,9 +261,8 @@ export function usePoints() {
       const allowance = await readAllowance(walletAddress);
       if (allowance < CHECK_IN_FEE) {
         setCheckInStatus('approving');
-        // Approve a large amount so user doesn't need to approve every day
-        // 365 days × 0.01 USDC = 3.65 USDC (3650000 in 6 decimals)
-        const approveAmount = BigInt(3650000);
+        // Approve exact fee only — MetaMask shows exactly 0.01 USDC, no surprises
+        const approveAmount = CHECK_IN_FEE; // 10000 = 0.01 USDC in 6 decimals
         // encodeSelector already returns '0x...' — concatenate raw hex without extra '0x'
         const approveSelector = encodeSelector('approve(address,uint256)'); // '0x095ea7b3'
         const approveData = approveSelector +
