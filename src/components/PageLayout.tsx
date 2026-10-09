@@ -10,6 +10,8 @@ interface PageLayoutProps {
   swapMode?: 'swap' | 'bridge';
   /** fullWidth: no brand panel — page uses the full viewport (e.g. Points dashboard) */
   fullWidth?: boolean;
+  /** Override the brand column with custom content (desktop only) */
+  brandContent?: ReactNode;
 }
 
 /**
@@ -19,7 +21,7 @@ interface PageLayoutProps {
  * - Mobile: single column, children first, brand panel below.
  * - fullWidth: no brand panel, page uses full viewport width.
  */
-export default function PageLayout({ children, brandSide = 'left', swapMode, fullWidth }: PageLayoutProps) {
+export default function PageLayout({ children, brandSide = 'left', swapMode, fullWidth, brandContent }: PageLayoutProps) {
   if (fullWidth) {
     return (
       <>
@@ -41,7 +43,7 @@ export default function PageLayout({ children, brandSide = 'left', swapMode, ful
 
   const brandCol = (
     <div className="lg:flex-1 hidden lg:flex flex-col min-h-[calc(100dvh-65px)]">
-      <PageBrandPanel swapMode={swapMode} />
+      {brandContent ?? <PageBrandPanel swapMode={swapMode} />}
     </div>
   );
 
