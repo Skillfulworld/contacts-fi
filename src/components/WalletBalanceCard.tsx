@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useWallet } from '@/context/WalletContext';
 import { TrendingUp } from 'lucide-react';
 
@@ -11,7 +12,7 @@ const TOKENS = [
     name: 'USD Coin',
     address: '0x3600000000000000000000000000000000000000',
     decimals: 6,
-    color: '#2775CA',
+    logo: '/branding/USDC white.png',
     usdRate: 1.00,
   },
   {
@@ -19,16 +20,16 @@ const TOKENS = [
     name: 'Euro Coin',
     address: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1',
     decimals: 6,
-    color: '#0052B4',
-    usdRate: 1.09, // approximate EUR/USD
+    logo: '/branding/EURC white.png',
+    usdRate: 1.09,
   },
   {
     symbol: 'cirBTC',
     name: 'Circle BTC',
     address: '0x1E0049783F008A0085193E00003D00cd54003c71',
     decimals: 8,
-    color: '#F7931A',
-    usdRate: 65000, // approximate BTC/USD
+    logo: '/branding/BTC white.png',
+    usdRate: 65000,
   },
 ];
 
@@ -61,26 +62,26 @@ interface TokenRow {
   name: string;
   balance: number;
   usdValue: number;
-  color: string;
+  logo: string;
   loading: boolean;
 }
 
 export default function WalletBalanceCard({ className = '' }: { className?: string }) {
   const { walletAddress, isConnected } = useWallet();
   const [rows, setRows] = useState<TokenRow[]>(
-    TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, color: t.color, loading: true }))
+    TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, logo: t.logo, loading: true }))
   );
   const [fetched, setFetched] = useState(false);
 
   useEffect(() => {
     if (!isConnected || !walletAddress) {
-      setRows(TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, color: t.color, loading: false })));
+      setRows(TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, logo: t.logo, loading: false })));
       setFetched(false);
       return;
     }
     let cancelled = false;
     async function load() {
-      setRows(TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, color: t.color, loading: true })));
+      setRows(TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, logo: t.logo, loading: true })));
       const results = await Promise.all(
         TOKENS.map(async (t) => {
           const balance = await fetchTokenBalance(t.address, walletAddress!, t.decimals);
@@ -89,7 +90,7 @@ export default function WalletBalanceCard({ className = '' }: { className?: stri
             name: t.name,
             balance,
             usdValue: balance * t.usdRate,
-            color: t.color,
+            logo: t.logo,
             loading: false,
           };
         })
@@ -141,9 +142,15 @@ export default function WalletBalanceCard({ className = '' }: { className?: stri
         {rows.map((row) => (
           <div key={row.symbol} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Token dot */}
+              {/* Token logo */}
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
+                <Image
+                  src={row.logo}
+                  alt={row.symbol}
+                  width={20}
+                  height={20}
+                  className="object-contain"
+                />
               </div>
               <div>
                 <p className="text-sm font-semibold leading-tight">{row.symbol}</p>
