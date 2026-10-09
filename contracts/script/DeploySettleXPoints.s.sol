@@ -13,17 +13,20 @@ contract DeploySettleXPoints is Script {
     function run() external {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
+        address operatorAddr = vm.envAddress("SETTLEX_SIGNER_ADDRESS");
 
         console.log("Deploying from:", deployer);
         console.log("USDC:", USDC);
         console.log("Platform wallet:", PLATFORM_WALLET);
+        console.log("Operator:", operatorAddr);
 
         vm.startBroadcast(deployerKey);
 
         SettleXPoints points = new SettleXPoints(
             USDC,
             PLATFORM_WALLET,
-            PLATFORM_WALLET // owner = platform wallet
+            PLATFORM_WALLET, // owner = platform wallet
+            operatorAddr
         );
 
         vm.stopBroadcast();

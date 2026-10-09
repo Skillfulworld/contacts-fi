@@ -16,12 +16,41 @@ Deploy a `SettleXPoints` smart contract on Arc Mainnet that permanently records 
 - Scope: check-in only for Phase 1 — task system added in Phase 2
 - Operator wallet for task signing: discussed separately before Phase 2
 
-## Phase 2 (future — do not build yet)
-- Server-signed task claims: `claimTaskPoints(taskId, signature)`
-- Operator/signer wallet: dedicated key stored in Vercel env vars, never in frontend
-- Tasks: swap on SettleX DEX, bridge via CCTP, send USDC — all verifiable via on-chain event indexing
-- Direct task recording: `recordDirectTask(address user, taskId)` callable only by operator
-- Wrapper contract option: SettleXRouter wraps Uniswap + records task atomically
+## Phase 2 — Task System + Referrals (building now)
+
+### Tasks
+| Task | Points | Daily limit | Verification |
+|---|---|---|---|
+| Twitter reply+repost | 15 pts | once | Manual — owner signs approval from owner wallet |
+| Add a Contact | 5 pts | once | Trust-based — user claims, contract enforces once/day |
+| Swap Assets | 10 pts | 3×/day | Server reads Uniswap Swap events, signs voucher |
+| Send USDC | 8 pts | 2×/day | Server reads USDC Transfer events, signs voucher |
+| Refer a Friend | 10 pts | unlimited | On-chain: referrer wallet = referral code; settlex.click/r/0xADDRESS |
+
+### Twitter task: Manual approval flow
+- User clicks "I've done this" → frontend records claim request
+- Owner reviews and calls `approveTwitterTask(address user)` from owner wallet
+- Contract awards 15 pts, marks task claimed for that epoch
+
+### Referral flow
+- Referral link: `settlex.click/r/0xREFERRER_ADDRESS`
+- New user opens link → referrer address stored in localStorage
+- On first check-in: frontend calls `claimReferral(referrerAddress)`
+- Contract: awards 10 pts to referrer, 5 pts to new user, records pair permanently
+
+### Contract changes (extending existing SettleXPoints.sol)
+- `claimTask(bytes32 taskId, bytes calldata sig)` — server-signed voucher for swap/send
+- `claimContactTask()` — trust-based, once/day
+- `approveTwitterTask(address user)` — onlyOwner
+- `claimReferral(address referrer)` — on-chain, once per wallet ever
+- Daily reset via timestamp comparison (same pattern as check-in)
+- Operator address stored in contract, set by owner
+
+### Operator signer
+- New wallet generated, private key in Vercel as `SETTLEX_SIGNER_PRIVATE_KEY`
+- Public address stored in contract as `operator`
+- Server signs `keccak256(abi.encodePacked(user, taskId, day))` — day = block.timestamp / 86400
+- Prevents replay across days, prevents cross-task reuse
 
 ## Files to Create/Modify
 1. `contracts/SettleXPoints.sol` — the smart contract

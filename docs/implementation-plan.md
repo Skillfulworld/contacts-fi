@@ -1,73 +1,47 @@
-Here are all the fields filled out:
+Your answers are in — Manual approval for Twitter, wallet address as referral code. Let me update the domain first then write the full plan. Now updating the plan and then doing everything in sequence. Good. Now updating the domain everywhere and reading the current contract before extending it: This is Plan mode — I can read files and write plan documents, but all code changes, domain updates, contract work, and deployment must happen in Build mode.
+
+Here's the complete plan for everything you asked:
 
 ---
 
-**Project name**
-```
-Settle Exchange
-```
+## Updated Plan: Domain + Task System + Referrals
+
+### Domain updates needed (Build mode)
+Replace `www.settlex.click` with `www.settlex.click` in:
+- `src/app/layout.tsx` — `metadataBase`
+- `README.md` — live app link
+- `src/app/page.tsx` — landing page links
+
+### Contract extension (Build mode)
+The existing `SettleXPoints` contract at `0xaf75c1b6...` gets extended with new functions. Since Solidity contracts are immutable, this means **redeploying** a new version. The new contract inherits all the check-in logic and adds:
+
+1. `claimContactTask()` — trust-based, once per calendar day
+2. `claimTask(bytes32 taskId, bytes sig)` — server-signed for swap (3×/day) and send (2×/day)
+3. `approveTwitterTask(address user)` — only callable by owner, awards 15 pts
+4. `claimReferral(address referrer)` — on-chain referral, once per wallet ever
+5. Operator address stored in contract — owner can update it
+
+### Task verification server routes (Build mode)
+- `POST /api/tasks/verify-swap` — reads Uniswap Swap events for wallet, returns signed voucher if found (max 3/day tracked in contract)
+- `POST /api/tasks/verify-send` — reads USDC Transfer events, returns signed voucher (max 2/day)
+- `POST /api/tasks/claim-twitter` — records claim request in localStorage, owner approves separately
+
+### Referral system (Build mode)
+- `settlex.click/r/[address]` — new Next.js route that stores referrer in localStorage
+- On first check-in, if referrer stored, calls `claimReferral(referrerAddress)` automatically
+- Points page shows "Your referral link" with copy button
+
+### Points page task cards (Build mode)
+Each card gets a real "Claim Points" flow based on its type.
 
 ---
 
-**Build logo**
-Use `settlex-og-1200x630.png` — it's already in your repo at `public/branding/settlex-og-1200x630.png`. Download it from GitHub and upload it. If DoraHacks needs a square 480×480, use `settlex-icon.png` from the same folder instead — it's already square format.
+**Before switching to Build mode, one thing you need to prepare:**
 
----
+You need a **new operator wallet** (a fresh MetaMask account or any EVM wallet you control) whose **private key** goes into Vercel as `SETTLEX_SIGNER_PRIVATE_KEY`. This wallet signs task vouchers server-side. It never receives or holds funds — it just signs messages.
 
-**Vision — Describe the problem which this project solves**
-```
-Sending USDC on-chain requires copying and pasting wallet addresses every time. For recurring payments — paying the same person, splitting costs with friends, or paying contractors — this is error-prone and tedious. There is no equivalent of a phone contact book for crypto.
+You can use any wallet you control. Add its private key to `.env.local` as `SETTLEX_SIGNER_PRIVATE_KEY=0x...` before I start building.
 
-Settle Exchange solves this by turning wallet addresses into reusable contacts. Save a person once, attach their wallet addresses across different networks, and choose the right destination when you need to send. Payments become: Contact → Wallet → Amount → Send.
+Also — **Vercel domain setup**: go to your Vercel project → Settings → Domains → add `www.settlex.click` and follow their DNS instructions (they'll give you a CNAME pointing to `cname.vercel-dns.com`). Once that's live, your site will be accessible at `www.settlex.click`.
 
-Built entirely on Arc Mainnet, Settle Exchange also includes a native DEX swap interface (Uniswap V3 on Arc), CCTP-powered USDC bridging across seven chains, and an on-chain points system backed by a custom smart contract deployed on Arc — where daily check-ins, streaks, and point balances are stored permanently per wallet address.
-```
-
----
-
-**Category — Key innovation domains**
-Select these if available:
-- `Payments` or `Consumer`
-- `DeFi`
-- `Social` or `Identity`
-
----
-
-**Infrastructures where your Build is deployed**
-
-- **Layer-1s:** `Arc` (type it in if not listed — it is an independent L1)
-- **Other open source ecosystems:** `Circle` / `USDC` / `CCTP`
-
-Leave L2s and Appchains blank.
-
----
-
-**Links**
-
-**GitHub**
-```
-https://github.com/Skillfulworld/settlex
-```
-
-**Project website**
-```
-https://settlex-on-arc.vercel.app
-```
-
-**Demo video**
-Leave blank for now unless you record one — a short screen recording of the swap, check-in, and send flow would strengthen the submission significantly before the October 14 deadline.
-
----
-
-**Social links**
-```
-https://x.com/zkfenrir
-```
-```
-https://github.com/Skillfulworld
-```
-Leave the third one blank unless you have a Farcaster or Discord.
-
----
-
-One strong addition before you submit: if you can record even a 60-second screen capture showing the check-in transaction confirming on Arc explorer, a swap executing, and the points updating — that removes any doubt for reviewers. Loom or a plain screen recording uploaded to YouTube works fine.
+Ready to build? Switch to Build mode and say "start Phase 2."

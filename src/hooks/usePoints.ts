@@ -15,7 +15,7 @@ import { useWallet } from '@/context/WalletContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const SETTLEX_POINTS_ADDRESS = '0xaf75c1b6EDeE3Cf03FF1282145dD7878EcFfB7B0' as const;
+export const SETTLEX_POINTS_ADDRESS = '0x11207436A901ADFaFD9387A724810070baAF2C72' as const;
 export const USDC_ADDRESS = '0x3600000000000000000000000000000000000000' as const;
 export const ARC_MAINNET_CHAIN_ID = 5042;
 export const CHECK_IN_FEE = BigInt(10000); // 0.01 USDC in 6 decimals
@@ -143,6 +143,13 @@ function encodeSelector(sig: string): string {
     'checkIn()':              '0x183ff085',
     'allowance(address,address)': '0xdd62ed3e',
     'approve(address,uint256)':   '0x095ea7b3',
+    'claimContactTask()':         '0xa6a1f6e0',
+    'claimTask(bytes32,uint256,uint256,bytes)': '0x6e553f65',
+    'claimReferral(address)':     '0x4d3c9bf1',
+    'getTaskNonce(address)':      '0x47e2a4c8',
+    'getTaskClaimsToday(address,bytes32)': '0x5b3fcf6a',
+    'hasReferralBeenClaimed(address)': '0x1f6a3f4e',
+    'getReferralCount(address)':  '0x5dfc1cad',
   };
   return selectors[sig] ?? sig;
 }
@@ -187,6 +194,24 @@ async function readAllowance(owner: string): Promise<bigint> {
   return decodeUint256(result, 0);
 }
 
+async function readTaskNonce(address: string): Promise<bigint> {
+  const data = encodeSelector('getTaskNonce(address)') + encodeAddress(address);
+  const result = await ethCall(SETTLEX_POINTS_ADDRESS, data);
+  return decodeUint256(result, 0);
+}
+
+async function readHasBeenReferred(address: string): Promise<boolean> {
+  const data = encodeSelector('hasReferralBeenClaimed(address)') + encodeAddress(address);
+  const result = await ethCall(SETTLEX_POINTS_ADDRESS, data);
+  return decodeUint256(result, 0) !== BigInt(0);
+}
+
+async function readReferralCount(address: string): Promise<number> {
+  const data = encodeSelector('getReferralCount(address)') + encodeAddress(address);
+  const result = await ethCall(SETTLEX_POINTS_ADDRESS, data);
+  return Number(decodeUint256(result, 0));
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function usePoints() {
@@ -199,6 +224,10 @@ export function usePoints() {
   const [checkInError, setCheckInError] = useState<string | null>(null);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [needsChainSwitch, setNeedsChainSwitch] = useState(false);
+  const [hasBeenReferred, setHasBeenReferred] = useState(false);
+  const [referralCount, setReferralCount] = useState(0);
+  const [taskStatus, setTaskStatus] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
+  const [taskError, setTaskError] = useState<Record<string, string>>({});
 
   // Derived: is wallet on Arc Mainnet?
   const isOnArcMainnet = chainId != null &&
@@ -209,12 +238,16 @@ export function usePoints() {
     if (!walletAddress) return;
     setIsLoading(true);
     try {
-      const [rec, canCI] = await Promise.all([
+      const [rec, canCI, referred, refCount] = await Promise.all([
         readUserRecord(walletAddress),
         readCanCheckIn(walletAddress),
+        readHasBeenReferred(walletAddress),
+        readReferralCount(walletAddress),
       ]);
       setRecord(rec);
       setCanCheckInNow(canCI);
+      setHasBeenReferred(referred);
+      setReferralCount(refCount);
     } catch (err) {
       console.error('usePoints refresh error', err);
     } finally {
@@ -319,7 +352,146 @@ export function usePoints() {
     }
   }, [walletAddress, walletProvider, canCheckInNow, isOnArcMainnet, switchToArcMainnet, refresh]);
 
-  // Derived from on-chain record — same shape as old hook so UI components don't change
+  // ─── Task claiming ─────────────────────────────────────────────────────────
+
+  /** Claim points for Add a Contact (trust-based, once/day) */
+  const doClaimContactTask = useCallback(async () => {
+    if (!walletAddress || !walletProvider) return;
+    const key = 'TASK_CONTACT';
+    setTaskStatus(s => ({ ...s, [key]: 'loading' }));
+    setTaskError(s => ({ ...s, [key]: '' }));
+    try {
+      if (!isOnArcMainnet) {
+        const r = await switchToArcMainnet();
+        if (!r.ok) throw new Error('Switch to Arc Mainnet first');
+      }
+      // claimContactTask() selector
+      const data = encodeSelector('claimContactTask()');
+      const txHash = await walletProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: walletAddress, to: SETTLEX_POINTS_ADDRESS, data }],
+      }) as string;
+      await waitForTx(txHash, walletProvider);
+      setTaskStatus(s => ({ ...s, [key]: 'success' }));
+      await refresh();
+      setTimeout(() => setTaskStatus(s => ({ ...s, [key]: 'idle' })), 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      if (msg.includes('rejected') || msg.includes('denied')) {
+        setTaskStatus(s => ({ ...s, [key]: 'idle' }));
+      } else {
+        setTaskStatus(s => ({ ...s, [key]: 'error' }));
+        setTaskError(s => ({ ...s, [key]: msg }));
+      }
+    }
+  }, [walletAddress, walletProvider, isOnArcMainnet, switchToArcMainnet, refresh]);
+
+  /** Claim swap/send task points via server-signed voucher */
+  const doClaimServerTask = useCallback(async (taskId: 'TASK_SWAP' | 'TASK_SEND') => {
+    if (!walletAddress || !walletProvider) return;
+    setTaskStatus(s => ({ ...s, [taskId]: 'loading' }));
+    setTaskError(s => ({ ...s, [taskId]: '' }));
+    try {
+      if (!isOnArcMainnet) {
+        const r = await switchToArcMainnet();
+        if (!r.ok) throw new Error('Switch to Arc Mainnet first');
+      }
+      // Get current nonce from contract
+      const nonce = await readTaskNonce(walletAddress);
+      // Ask server to verify + sign
+      const res = await fetch('/api/tasks/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, walletAddress, nonce: nonce.toString() }),
+      });
+      const json = await res.json() as { voucher?: { taskId: string; day: string; nonce: string; sig: string }; error?: string };
+      if (!res.ok || !json.voucher) throw new Error(json.error ?? 'Verification failed');
+
+      const { taskId: taskIdHash, day, nonce: voucherNonce, sig } = json.voucher;
+
+      // Build claimTask(bytes32,uint256,uint256,bytes) calldata manually
+      // selector + bytes32 taskId + uint256 day + uint256 nonce + bytes offset + bytes length + bytes data (padded)
+      const selector = '0x6e553f65'; // keccak4('claimTask(bytes32,uint256,uint256,bytes)')
+      const sigHex = sig.replace('0x', '');
+      const sigLen = sigHex.length / 2; // 65 bytes
+      const sigPadded = sigHex.padEnd(Math.ceil(sigLen / 32) * 64, '0');
+      const data = selector
+        + taskIdHash.replace('0x', '').padStart(64, '0')
+        + BigInt(day).toString(16).padStart(64, '0')
+        + BigInt(voucherNonce).toString(16).padStart(64, '0')
+        + '0000000000000000000000000000000000000000000000000000000000000080' // bytes offset = 128
+        + sigLen.toString(16).padStart(64, '0')
+        + sigPadded;
+
+      const txHash = await walletProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: walletAddress, to: SETTLEX_POINTS_ADDRESS, data: '0x' + data.slice(2) }],
+      }) as string;
+      await waitForTx(txHash, walletProvider);
+      setTaskStatus(s => ({ ...s, [taskId]: 'success' }));
+      await refresh();
+      setTimeout(() => setTaskStatus(s => ({ ...s, [taskId]: 'idle' })), 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      if (msg.includes('rejected') || msg.includes('denied')) {
+        setTaskStatus(s => ({ ...s, [taskId]: 'idle' }));
+      } else {
+        setTaskStatus(s => ({ ...s, [taskId]: 'error' }));
+        setTaskError(s => ({ ...s, [taskId]: msg }));
+      }
+    }
+  }, [walletAddress, walletProvider, isOnArcMainnet, switchToArcMainnet, refresh]);
+
+  /** Submit Twitter task for manual review */
+  const doClaimTwitterTask = useCallback(async () => {
+    if (!walletAddress) return;
+    const key = 'TASK_TWITTER';
+    setTaskStatus(s => ({ ...s, [key]: 'loading' }));
+    try {
+      const res = await fetch('/api/tasks/twitter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress }),
+      });
+      const json = await res.json() as { ok?: boolean; message?: string; error?: string };
+      if (!res.ok) throw new Error(json.error ?? 'Failed to submit');
+      setTaskStatus(s => ({ ...s, [key]: 'success' }));
+      setTimeout(() => setTaskStatus(s => ({ ...s, [key]: 'idle' })), 6000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed';
+      setTaskStatus(s => ({ ...s, [key]: 'error' }));
+      setTaskError(s => ({ ...s, [key]: msg }));
+    }
+  }, [walletAddress]);
+
+  /** Claim referral bonus (on-chain, once per wallet) */
+  const doClaimReferral = useCallback(async (referrerAddress: string) => {
+    if (!walletAddress || !walletProvider) return;
+    const key = 'TASK_REFERRAL';
+    setTaskStatus(s => ({ ...s, [key]: 'loading' }));
+    try {
+      if (!isOnArcMainnet) {
+        const r = await switchToArcMainnet();
+        if (!r.ok) throw new Error('Switch to Arc Mainnet first');
+      }
+      const selector = encodeSelector('claimReferral(address)');
+      const data = selector + encodeAddress(referrerAddress);
+      const txHash = await walletProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: walletAddress, to: SETTLEX_POINTS_ADDRESS, data }],
+      }) as string;
+      await waitForTx(txHash, walletProvider);
+      setTaskStatus(s => ({ ...s, [key]: 'success' }));
+      await refresh();
+      setTimeout(() => setTaskStatus(s => ({ ...s, [key]: 'idle' })), 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      setTaskStatus(s => ({ ...s, [key]: 'error' }));
+      setTaskError(s => ({ ...s, [key]: msg }));
+    }
+  }, [walletAddress, walletProvider, isOnArcMainnet, switchToArcMainnet, refresh]);
+
+  // ─── Derived from on-chain record — same shape as old hook so UI components don't change
   const total              = record?.totalPoints ?? 0;
   const streak             = record?.streak ?? 0;
   const cycleDay           = record?.weekCycleDay ?? 0;
@@ -365,6 +537,16 @@ export function usePoints() {
     refresh,
     isOnArcMainnet,
     needsChainSwitch,
+    // Task actions
+    doClaimContactTask,
+    doClaimServerTask,
+    doClaimTwitterTask,
+    doClaimReferral,
+    taskStatus,
+    taskError,
+    // Referral
+    hasBeenReferred,
+    referralCount,
     // Legacy
     awardTaskPoints: () => {},
   };

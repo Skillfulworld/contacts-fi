@@ -63,7 +63,7 @@ contract SettleXPointsTest is Test {
     uint256 internal constant STREAK_GRACE_PERIOD = 48 hours;
     uint256 internal constant GRAND_PRIZE_DAY_THRESHOLD = 30;
     uint256 internal constant GRAND_PRIZE_BONUS = 45;
-    uint256 internal constant MAX_CHECKIN_FEE = 100_000;
+    uint256 internal constant MAX_CHECKIN_FEE = 50_000;
     uint256 internal constant DEFAULT_FEE = 10_000;
 
     // Weekly rewards schedule (0-indexed day → points).
@@ -75,6 +75,7 @@ contract SettleXPointsTest is Test {
     address internal bob = makeAddr("bob");
     address internal platformWallet = makeAddr("platformWallet");
     address internal stranger = makeAddr("stranger");
+    address internal operator = makeAddr("operator");
 
     // ── contracts ────────────────────────────────────────────────────────────
     MockERC20 internal usdc;
@@ -124,7 +125,7 @@ contract SettleXPointsTest is Test {
         vm.warp(1_000_000);
 
         vm.prank(owner);
-        sxp = new SettleXPoints(address(usdc), platformWallet, owner);
+        sxp = new SettleXPoints(address(usdc), platformWallet, owner, operator);
 
         // Give alice and bob plenty of USDC.
         _fund(alice, 10_000_000);
@@ -144,12 +145,12 @@ contract SettleXPointsTest is Test {
 
     function test_Constructor_RevertZeroUsdc() public {
         vm.expectRevert(SettleXPoints.ZeroAddress.selector);
-        new SettleXPoints(address(0), platformWallet, owner);
+        new SettleXPoints(address(0), platformWallet, owner, address(1));
     }
 
     function test_Constructor_RevertZeroPlatformWallet() public {
         vm.expectRevert(SettleXPoints.ZeroAddress.selector);
-        new SettleXPoints(address(usdc), address(0), owner);
+        new SettleXPoints(address(usdc), address(0), owner, address(1));
     }
 
     function test_Constructor_RevertZeroOwner() public {
@@ -158,7 +159,7 @@ contract SettleXPointsTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0))
         );
-        new SettleXPoints(address(usdc), platformWallet, address(0));
+        new SettleXPoints(address(usdc), platformWallet, address(0), address(1));
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -803,6 +804,7 @@ contract SettleXPointsInvariantTest is Test {
 
     address internal owner;
     address internal platformWallet;
+    address internal operator;
 
     // Stored in contract state so invariant_* (non-view) can access them.
     address internal user0;
@@ -812,6 +814,7 @@ contract SettleXPointsInvariantTest is Test {
     function setUp() public {
         owner = makeAddr("owner");
         platformWallet = makeAddr("platformWallet");
+        operator = makeAddr("operator");
         user0 = makeAddr("user0");
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
@@ -820,7 +823,7 @@ contract SettleXPointsInvariantTest is Test {
         vm.warp(1_000_000);
 
         vm.prank(owner);
-        sxp = new SettleXPoints(address(usdc), platformWallet, owner);
+        sxp = new SettleXPoints(address(usdc), platformWallet, owner, operator);
 
         // Three independent users for the fuzzer to drive.
         address[] memory users = new address[](3);

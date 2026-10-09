@@ -1,79 +1,46 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Flame, Trophy, Star, CheckCircle2, Circle,
+  Flame, Trophy, CheckCircle2, Circle,
   Zap, ArrowUpRight, Users, Repeat2, ExternalLink, Loader2,
+  MessageCircle, Link2, Copy, Check,
 } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import { usePoints, WEEKLY_REWARDS, GRAND_PRIZE_30, GRAND_PRIZE_STREAK } from '@/hooks/usePoints';
+import { useWallet } from '@/context/WalletContext';
 
-// Single blue tone for all icons
 const BLUE = 'text-[#3B82F6] bg-[#EFF6FF]';
-
-// ─── Coming-soon placeholder tasks ─────────────────────────────────────────────
-const PLACEHOLDER_TASKS = [
-  {
-    id: 'send_usdc',
-    icon: ArrowUpRight,
-    label: 'Send USDC',
-    description: 'Send USDC to a saved contact on Arc Mainnet.',
-    pts: 10,
-  },
-  {
-    id: 'bridge_usdc',
-    icon: Zap,
-    label: 'Bridge USDC',
-    description: 'Bridge USDC across chains using Circle CCTP.',
-    pts: 15,
-  },
-  {
-    id: 'add_contact',
-    icon: Users,
-    label: 'Add a Contact',
-    description: 'Save a new contact with a wallet address.',
-    pts: 5,
-  },
-  {
-    id: 'swap_assets',
-    icon: Repeat2,
-    label: 'Swap Assets',
-    description: 'Swap supported tokens on Arc Mainnet.',
-    pts: 10,
-  },
-  {
-    id: 'refer_friend',
-    icon: Star,
-    label: 'Refer a Friend',
-    description: 'Invite a friend to join Settle Exchange.',
-    pts: 25,
-  },
-  {
-    id: 'grand_streak',
-    icon: Trophy,
-    label: '30-Day Streak',
-    description: `Maintain a 30-day consecutive check-in streak for a grand prize.`,
-    pts: GRAND_PRIZE_30,
-    isMilestone: true,
-  },
-];
 
 export default function PointsPage() {
   const {
-    total,
-    streak,
-    weeklyDays,
-    isCheckInAvailable,
-    cycleDay,
-    todayPoints,
-    completedWeeklyDays,
-    grandPrizeProgress,
-    checkInStatus,
-    doCheckIn,
-    isLoading,
+    total, streak, weeklyDays, isCheckInAvailable, cycleDay, todayPoints,
+    completedWeeklyDays, grandPrizeProgress, checkInStatus, doCheckIn, isLoading,
+    doClaimContactTask, doClaimServerTask, doClaimTwitterTask, doClaimReferral,
+    taskStatus, taskError, hasBeenReferred, referralCount, refresh,
   } = usePoints();
+  const { walletAddress, isConnected } = useWallet();
 
   const [checkedIn, setCheckedIn] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const referralLink = walletAddress
+    ? `https://www.settlex.click/r/${walletAddress.toLowerCase()}`
+    : '';
+
+  // Auto-claim referral on first connect if stored
+  const autoClaim = useCallback(async () => {
+    if (!isConnected || !walletAddress || hasBeenReferred) return;
+    try {
+      const referrer = localStorage.getItem('settlex_referrer');
+      if (referrer && referrer.toLowerCase() !== walletAddress.toLowerCase()) {
+        await doClaimReferral(referrer);
+        localStorage.removeItem('settlex_referrer');
+      }
+    } catch { /* silent */ }
+  }, [isConnected, walletAddress, hasBeenReferred, doClaimReferral]);
+
+  useEffect(() => { autoClaim(); }, [autoClaim]);
 
   const handleCheckIn = async () => {
     if (!isCheckInAvailable) return;
@@ -81,21 +48,155 @@ export default function PointsPage() {
     setCheckedIn(true);
     setTimeout(() => setCheckedIn(false), 3000);
   };
+
+  const handleCopyReferral = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const grandPrizePct = Math.round((grandPrizeProgress / GRAND_PRIZE_STREAK) * 100);
 
-  // ─── Left column: check-in + history (mobile: full page) ──────────────────
+  // ─── Task card definitions ──────────────────────────────────────────────────
+  const TASKS = [
+    {
+      id: 'TASK_TWITTER',
+      icon: MessageCircle,
+      label: 'Engage on X',
+      description: 'Reply and repost the latest Settle Exchange tweet.',
+      pts: 15,
+      visitUrl: 'https://x.com/Settle_xchange/status/2108646781496271089',
+      visitLabel: 'View Tweet',
+      status: taskStatus['TASK_TWITTER'] ?? 'idle',
+      error: taskError['TASK_TWITTER'],
+      onClaim: doClaimTwitterTask,
+      successMsg: 'Submitted for review — points awarded within 24h',
+      dailyMax: '1×/day',
+      badge: 'Manual Review',
+    },
+    {
+      id: 'TASK_CONTACT',
+      icon: Users,
+      label: 'Add a Contact',
+      description: 'Save a new contact with a wallet address.',
+      pts: 5,
+      visitUrl: '/contacts/add',
+      visitLabel: 'Add Contact',
+      status: taskStatus['TASK_CONTACT'] ?? 'idle',
+      error: taskError['TASK_CONTACT'],
+      onClaim: doClaimContactTask,
+      successMsg: '+5 pts awarded!',
+      dailyMax: '1×/day',
+      badge: 'Daily',
+    },
+    {
+      id: 'TASK_SWAP',
+      icon: Repeat2,
+      label: 'Swap Assets',
+      description: 'Swap any supported tokens on Arc Mainnet.',
+      pts: 10,
+      visitUrl: '/swap',
+      visitLabel: 'Swap Now',
+      status: taskStatus['TASK_SWAP'] ?? 'idle',
+      error: taskError['TASK_SWAP'],
+      onClaim: () => doClaimServerTask('TASK_SWAP'),
+      successMsg: '+10 pts awarded!',
+      dailyMax: '3×/day',
+      badge: 'Daily',
+    },
+    {
+      id: 'TASK_SEND',
+      icon: ArrowUpRight,
+      label: 'Send USDC',
+      description: 'Send USDC to a contact or wallet address on Arc Mainnet.',
+      pts: 8,
+      visitUrl: '/send',
+      visitLabel: 'Send Now',
+      status: taskStatus['TASK_SEND'] ?? 'idle',
+      error: taskError['TASK_SEND'],
+      onClaim: () => doClaimServerTask('TASK_SEND'),
+      successMsg: '+8 pts awarded!',
+      dailyMax: '2×/day',
+      badge: 'Daily',
+    },
+  ];
+
+  // ─── Task card component ──────────────────────────────────────────────────
+  const TaskCard = ({ task }: { task: typeof TASKS[0] }) => {
+    const Icon = task.icon;
+    const isLoading = task.status === 'loading';
+    const isDone = task.status === 'success';
+    return (
+      <div className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-[0_4px_12px_rgba(17,24,39,0.04)]">
+        <div className="flex items-start gap-3 mb-3">
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${BLUE}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="font-semibold text-[#1C1C1E] text-sm">{task.label}</span>
+              <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#3B82F6]">
+                {task.badge}
+              </span>
+              <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[9px] font-semibold text-[#9CA3AF]">
+                {task.dailyMax}
+              </span>
+            </div>
+            <p className="text-xs text-[#6B7280]">{task.description}</p>
+            {isDone && (
+              <p className="text-xs text-[#22C55E] font-semibold mt-1 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />{task.successMsg}
+              </p>
+            )}
+            {task.status === 'error' && task.error && (
+              <p className="text-xs text-red-500 mt-1 leading-tight">{task.error}</p>
+            )}
+          </div>
+          <span className="text-sm font-bold text-[#3B82F6] shrink-0">+{task.pts} pts</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href={task.visitUrl}
+            target={task.visitUrl.startsWith('http') ? '_blank' : undefined}
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-xs font-semibold text-[#374151] hover:bg-[#F3F4F6] transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {task.visitLabel}
+          </a>
+          <button
+            onClick={task.onClaim}
+            disabled={isLoading || isDone || !isConnected}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+              isDone
+                ? 'bg-[#DCFCE7] text-[#16A34A]'
+                : isLoading
+                ? 'bg-[#EFF6FF] text-[#3B82F6] cursor-wait'
+                : !isConnected
+                ? 'bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed'
+                : 'bg-[#6D5DF6] text-white hover:bg-[#5a4de0] active:scale-[0.98]'
+            }`}
+          >
+            {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isDone ? 'Claimed!' : isLoading ? 'Verifying…' : !isConnected ? 'Connect Wallet' : 'Claim Points'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Left column ─────────────────────────────────────────────────────────
   const leftCol = (
     <div className="w-full px-4 py-5 pb-28 lg:pb-6 lg:px-6 space-y-4 lg:overflow-y-auto lg:h-full">
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Total Points */}
         <div className="rounded-3xl bg-[#EFF6FF] border border-[#BFDBFE] p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#3B82F6] mb-1">Total Points</p>
           <p className="text-4xl font-bold text-[#1E3A5F]">{total.toLocaleString()}</p>
           <p className="text-[11px] text-[#6B7280] mt-1">Settle Exchange</p>
         </div>
-        {/* Streak — light card, no black */}
         <div className="rounded-3xl bg-[#F0F9FF] border border-[#BAE6FD] p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#3B82F6] mb-1">Streak</p>
           <div className="flex items-end gap-1">
@@ -119,34 +220,22 @@ export default function PointsPage() {
             <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[11px] font-semibold text-[#6B7280]">Done today</span>
           )}
         </div>
-
-        {/* 7-day grid */}
         <div className="grid grid-cols-7 gap-1.5 mb-4">
           {WEEKLY_REWARDS.map((pts, i) => {
             const done = weeklyDays[i];
             const isToday = !done && i === cycleDay && isCheckInAvailable;
             return (
-              <div
-                key={i}
-                className={`flex flex-col items-center gap-1 rounded-2xl py-2 border transition-all ${
-                  done
-                    ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
-                    : isToday
-                    ? 'bg-[#EFF6FF] border-[#3B82F6] text-[#3B82F6]'
-                    : 'bg-[#F5F6F8] border-[#E5E7EB] text-[#9CA3AF]'
-                }`}
+              <div key={i} className={`flex flex-col items-center gap-1 rounded-2xl py-2 border transition-all ${
+                done ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
+                : isToday ? 'bg-[#EFF6FF] border-[#3B82F6] text-[#3B82F6]'
+                : 'bg-[#F5F6F8] border-[#E5E7EB] text-[#9CA3AF]'}`}
               >
-                <span className="text-[8px] font-bold uppercase">
-                  {['M','T','W','T','F','S','S'][i]}
-                </span>
-                <span className="text-[10px] font-bold">
-                  {i === 6 ? '🏆' : `+${pts}`}
-                </span>
+                <span className="text-[8px] font-bold uppercase">{['M','T','W','T','F','S','S'][i]}</span>
+                <span className="text-[10px] font-bold">{i === 6 ? '🏆' : `+${pts}`}</span>
               </div>
             );
           })}
         </div>
-
         {isCheckInAvailable ? (
           <button
             onClick={handleCheckIn}
@@ -174,18 +263,45 @@ export default function PointsPage() {
           <span className="rounded-full bg-[#EFF6FF] px-3 py-1 text-sm font-bold text-[#3B82F6]">+{GRAND_PRIZE_30} pts</span>
         </div>
         <div className="mb-2 h-2.5 w-full overflow-hidden rounded-full bg-[#F3F4F6]">
-          <div
-            className="h-full rounded-full bg-[#3B82F6] transition-all duration-500"
-            style={{ width: `${grandPrizePct}%` }}
-          />
+          <div className="h-full rounded-full bg-[#3B82F6] transition-all duration-500" style={{ width: `${grandPrizePct}%` }} />
         </div>
         <p className="text-xs text-[#6B7280]">
           {grandPrizeProgress} / {GRAND_PRIZE_STREAK} consecutive days
-          {streak >= GRAND_PRIZE_STREAK ? ' — 🏆 Unlocked!' : ` — ${GRAND_PRIZE_STREAK - grandPrizeProgress} more to go`}
+          {grandPrizeProgress >= GRAND_PRIZE_STREAK ? ' — 🏆 Unlocked!' : ` — ${GRAND_PRIZE_STREAK - grandPrizeProgress} more to go`}
         </p>
       </div>
 
-      {/* Points history link — full history in Activity tab */}
+      {/* Referral card */}
+      <div className="rounded-3xl border border-[#E5E7EB] bg-white p-5 shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-[#3B82F6]" />
+            <span className="font-semibold text-[#1C1C1E]">Refer a Friend</span>
+          </div>
+          <span className="rounded-full bg-[#EFF6FF] px-3 py-1 text-sm font-bold text-[#3B82F6]">+10 pts</span>
+        </div>
+        <p className="text-xs text-[#6B7280] mb-3">
+          Share your link. When a friend joins and checks in, you earn 10 pts — they earn 5 pts.
+          {referralCount > 0 && <span className="ml-1 font-semibold text-[#3B82F6]">{referralCount} referral{referralCount !== 1 ? 's' : ''} so far.</span>}
+        </p>
+        {walletAddress ? (
+          <div className="flex items-center gap-2 rounded-2xl bg-[#F5F6F8] border border-[#E5E7EB] px-3 py-2">
+            <Link2 className="h-4 w-4 text-[#6B7280] shrink-0" />
+            <span className="flex-1 text-xs text-[#374151] truncate font-mono">{referralLink}</span>
+            <button
+              onClick={handleCopyReferral}
+              className="shrink-0 flex items-center gap-1 rounded-xl bg-[#6D5DF6] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#5a4de0] transition-colors"
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-[#9CA3AF]">Connect your wallet to get your referral link.</p>
+        )}
+      </div>
+
+      {/* Mobile history link */}
       <div className="lg:hidden flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-8 text-center shadow-sm">
         <Circle className="h-8 w-8 text-[#BFDBFE] mb-2" />
         <p className="text-sm font-semibold text-[#1C1C1E]">On-chain history</p>
@@ -195,64 +311,18 @@ export default function PointsPage() {
     </div>
   );
 
-  // ─── Right column: tasks (desktop only) ───────────────────────────────────
+  // ─── Right column: tasks ──────────────────────────────────────────────────
   const rightCol = (
     <div className="hidden lg:block lg:overflow-y-auto lg:h-full px-6 py-5 space-y-4">
-
-      {/* Tasks header */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280]">Tasks</p>
-        <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Coming Soon</span>
+        <span className="rounded-full bg-[#EFF6FF] px-3 py-1 text-[10px] font-semibold text-[#3B82F6] uppercase tracking-wide">Earn Points</span>
       </div>
-
-      {/* Placeholder task cards */}
       <div className="space-y-3">
-        {PLACEHOLDER_TASKS.map(task => {
-          const Icon = task.icon;
-          return (
-            <div
-              key={task.id}
-              className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-[0_4px_12px_rgba(17,24,39,0.04)]"
-            >
-              <div className="flex items-start gap-3 mb-3">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${BLUE}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-[#1C1C1E] text-sm">{task.label}</span>
-                    {task.isMilestone ? (
-                      <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#3B82F6]">Milestone</span>
-                    ) : (
-                      <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Coming Soon</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[#6B7280] mt-0.5">{task.description}</p>
-                </div>
-                <span className="text-sm font-bold text-[#3B82F6] shrink-0">+{task.pts} pts</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled
-                  className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-xs font-semibold text-[#9CA3AF] cursor-not-allowed"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Visit
-                </button>
-                <button
-                  disabled
-                  className="flex-1 rounded-xl bg-[#F3F4F6] px-3 py-2 text-xs font-semibold text-[#9CA3AF] cursor-not-allowed"
-                >
-                  Claim Points
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {TASKS.map(task => <TaskCard key={task.id} task={task} />)}
       </div>
-
-      {/* History — desktop: link to Activity tab */}
-      <div className="flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-10 text-center shadow-sm">
+      {/* History */}
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-[#E5E7EB] bg-white py-8 text-center shadow-sm">
         <Circle className="h-8 w-8 text-[#BFDBFE] mb-2" />
         <p className="text-sm font-semibold text-[#1C1C1E]">On-chain history</p>
         <p className="text-xs text-[#6B7280] mt-1">Check-in history lives permanently on Arc Mainnet.</p>
@@ -261,54 +331,21 @@ export default function PointsPage() {
     </div>
   );
 
-  // Mobile also shows tasks below the check-in
+  // Mobile tasks section
   const mobileTasksSection = (
     <div className="lg:hidden px-4 pb-8 space-y-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280] px-1">Tasks</p>
-      {PLACEHOLDER_TASKS.map(task => {
-        const Icon = task.icon;
-        return (
-          <div key={task.id} className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-[0_4px_12px_rgba(17,24,39,0.04)]">
-            <div className="flex items-start gap-3 mb-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${BLUE}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-[#1C1C1E] text-sm">{task.label}</span>
-                  {task.isMilestone ? (
-                    <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#3B82F6]">Milestone</span>
-                  ) : (
-                    <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Soon</span>
-                  )}
-                </div>
-                <p className="text-xs text-[#6B7280] mt-0.5">{task.description}</p>
-              </div>
-              <span className="text-sm font-bold text-[#3B82F6] shrink-0">+{task.pts}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button disabled className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-xs font-semibold text-[#9CA3AF] cursor-not-allowed">
-                <ExternalLink className="h-3.5 w-3.5" />Visit
-              </button>
-              <button disabled className="flex-1 rounded-xl bg-[#F3F4F6] px-3 py-2 text-xs font-semibold text-[#9CA3AF] cursor-not-allowed">
-                Claim Points
-              </button>
-            </div>
-          </div>
-        );
-      })}
+      {TASKS.map(task => <TaskCard key={task.id} task={task} />)}
     </div>
   );
 
   return (
     <PageLayout fullWidth>
       <div className="w-full lg:h-[calc(100dvh-65px)] lg:grid lg:grid-cols-2 lg:gap-0">
-        {/* Left — check-in dashboard */}
         <div className="lg:border-r lg:border-[#E5E7EB] lg:overflow-y-auto">
           {leftCol}
           {mobileTasksSection}
         </div>
-        {/* Right — tasks (desktop only) */}
         {rightCol}
       </div>
     </PageLayout>
