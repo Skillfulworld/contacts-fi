@@ -192,7 +192,23 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('No compatible wallet provider was detected.');
       }
 
-      const [account] = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
+      // Force account picker every time — even if MetaMask has a cached connection.
+      // wallet_requestPermissions with eth_accounts always shows the account selector.
+      let account: string | undefined;
+      try {
+        const perms = await provider.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }],
+        }) as Array<{ caveats?: Array<{ value?: string[] }> }>;
+        account = perms?.[0]?.caveats?.[0]?.value?.[0];
+      } catch {
+        // User cancelled the picker or wallet doesn't support wallet_requestPermissions
+      }
+      // Fallback: eth_requestAccounts gives us the selected account
+      if (!account) {
+        const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
+        account = accounts[0];
+      }
       if (!account) {
         throw new Error('Wallet access was not granted.');
       }
