@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Flame, Trophy, CheckCircle2, Circle,
   Zap, ArrowUpRight, Users, Repeat2, ExternalLink, Loader2,
@@ -23,6 +24,18 @@ export default function PointsPage() {
 
   const [checkedIn, setCheckedIn] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [visitedTasks, setVisitedTasks] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try { return JSON.parse(localStorage.getItem('settlex_visited_tasks') || '{}'); } catch { return {}; }
+  });
+
+  const markVisited = (taskId: string) => {
+    setVisitedTasks(prev => {
+      const next = { ...prev, [taskId]: true };
+      localStorage.setItem('settlex_visited_tasks', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const referralLink = walletAddress
     ? `https://www.settlex.click/r/${walletAddress.toLowerCase()}`
@@ -125,8 +138,42 @@ export default function PointsPage() {
   // ─── Task card component ──────────────────────────────────────────────────
   const TaskCard = ({ task }: { task: typeof TASKS[0] }) => {
     const Icon = task.icon;
-    const isLoading = task.status === 'loading';
+    const isBusy = task.status === 'loading';
     const isDone = task.status === 'success';
+    const hasVisited = visitedTasks[task.id] ?? false;
+    const canClaim = hasVisited && isConnected && !isBusy && !isDone;
+    const isExternal = task.visitUrl.startsWith('http');
+
+    const visitBtn = isExternal ? (
+      <a
+        href={task.visitUrl}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => markVisited(task.id)}
+        className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+          hasVisited
+            ? 'border-[#3B82F6] bg-[#EFF6FF] text-[#3B82F6]'
+            : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#374151] hover:bg-[#F3F4F6]'
+        }`}
+      >
+        {hasVisited ? <Check className="h-3.5 w-3.5" /> : <ExternalLink className="h-3.5 w-3.5" />}
+        {task.visitLabel}
+      </a>
+    ) : (
+      <Link
+        href={task.visitUrl}
+        onClick={() => markVisited(task.id)}
+        className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+          hasVisited
+            ? 'border-[#3B82F6] bg-[#EFF6FF] text-[#3B82F6]'
+            : 'border-[#E5E7EB] bg-[#F9FAFB] text-[#374151] hover:bg-[#F3F4F6]'
+        }`}
+      >
+        {hasVisited ? <Check className="h-3.5 w-3.5" /> : <ExternalLink className="h-3.5 w-3.5" />}
+        {task.visitLabel}
+      </Link>
+    );
+
     return (
       <div className="rounded-3xl border border-[#E5E7EB] bg-white p-4 shadow-[0_4px_12px_rgba(17,24,39,0.04)]">
         <div className="flex items-start gap-3 mb-3">
@@ -156,30 +203,32 @@ export default function PointsPage() {
           <span className="text-sm font-bold text-[#3B82F6] shrink-0">+{task.pts} pts</span>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href={task.visitUrl}
-            target={task.visitUrl.startsWith('http') ? '_blank' : undefined}
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-xs font-semibold text-[#374151] hover:bg-[#F3F4F6] transition-colors"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            {task.visitLabel}
-          </a>
+          {visitBtn}
           <button
             onClick={task.onClaim}
-            disabled={isLoading || isDone || !isConnected}
+            disabled={!canClaim}
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
               isDone
-                ? 'bg-[#DCFCE7] text-[#16A34A]'
-                : isLoading
+                ? 'bg-[#DCFCE7] text-[#16A34A] cursor-default'
+                : isBusy
                 ? 'bg-[#EFF6FF] text-[#3B82F6] cursor-wait'
                 : !isConnected
+                ? 'bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed'
+                : !hasVisited
                 ? 'bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed'
                 : 'bg-[#6D5DF6] text-white hover:bg-[#5a4de0] active:scale-[0.98]'
             }`}
           >
-            {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {isDone ? 'Claimed!' : isLoading ? 'Verifying…' : !isConnected ? 'Connect Wallet' : 'Claim Points'}
+            {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isDone
+              ? 'Claimed!'
+              : isBusy
+              ? 'Verifying…'
+              : !isConnected
+              ? 'Connect Wallet'
+              : !hasVisited
+              ? 'Visit first'
+              : 'Claim Points'}
           </button>
         </div>
       </div>

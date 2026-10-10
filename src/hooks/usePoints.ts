@@ -143,13 +143,13 @@ function encodeSelector(sig: string): string {
     'checkIn()':              '0x183ff085',
     'allowance(address,address)': '0xdd62ed3e',
     'approve(address,uint256)':   '0x095ea7b3',
-    'claimContactTask()':         '0xa6a1f6e0',
-    'claimTask(bytes32,uint256,uint256,bytes)': '0x6e553f65',
-    'claimReferral(address)':     '0x4d3c9bf1',
-    'getTaskNonce(address)':      '0x47e2a4c8',
-    'getTaskClaimsToday(address,bytes32)': '0x5b3fcf6a',
-    'hasReferralBeenClaimed(address)': '0x1f6a3f4e',
-    'getReferralCount(address)':  '0x5dfc1cad',
+    'claimContactTask()':         '0x1583598e',
+    'claimTask(bytes32,uint256,uint256,bytes)': '0x3b5f9775',
+    'claimReferral(address)':     '0xe61aee51',
+    'getTaskNonce(address)':      '0xba61204b',
+    'getTaskClaimsToday(address,bytes32)': '0x42669839',
+    'hasReferralBeenClaimed(address)': '0x99e01ab5',
+    'getReferralCount(address)':  '0x24acbd69',
   };
   return selectors[sig] ?? sig;
 }
@@ -411,7 +411,7 @@ export function usePoints() {
 
       // Build claimTask(bytes32,uint256,uint256,bytes) calldata manually
       // selector + bytes32 taskId + uint256 day + uint256 nonce + bytes offset + bytes length + bytes data (padded)
-      const selector = '0x6e553f65'; // keccak4('claimTask(bytes32,uint256,uint256,bytes)')
+      const selector = '0x3b5f9775'; // keccak4('claimTask(bytes32,uint256,uint256,bytes)')
       const sigHex = sig.replace('0x', '');
       const sigLen = sigHex.length / 2; // 65 bytes
       const sigPadded = sigHex.padEnd(Math.ceil(sigLen / 32) * 64, '0');

@@ -96,9 +96,9 @@ export default function LandingPage() {
         </div>
         <Link
           href="/contacts"
-          className="rounded-full bg-[#1C1C1E] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#333] transition-colors"
+          className="rounded-full bg-[#6D5DF6] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5a4de0] transition-colors flex items-center gap-1.5"
         >
-          Launch App
+          Connect Wallet <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </header>
 
@@ -137,7 +137,7 @@ export default function LandingPage() {
             >
               <Link
                 href="/contacts"
-                className="rounded-full bg-[#6D5DF6] px-7 py-3.5 font-semibold text-white shadow-[0_8px_24px_rgba(109,93,246,0.28)] hover:opacity-90 transition-all flex items-center gap-2"
+                className="rounded-full bg-[#1C1C1E] px-7 py-3.5 font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] hover:bg-[#333] transition-all flex items-center gap-2"
               >
                 Launch App <ArrowUpRight className="h-4 w-4" />
               </Link>

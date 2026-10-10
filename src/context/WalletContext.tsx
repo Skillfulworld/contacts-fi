@@ -118,6 +118,22 @@ const normalizeWallets = (wallets: BrowserWallet[]) => {
   return Array.from(unique.values());
 };
 
+const SESSION_KEY = 'settlex_wallet_session';
+
+function saveSession(address: string, chainId: string | null) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ address, chainId })); } catch { /* ignore */ }
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
+function loadSession(): { address: string; chainId: string | null } | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
 export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
   const [adapter, setAdapter] = useState<unknown | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -126,6 +142,39 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
   const [walletProvider, setWalletProvider] = useState<BrowserWallet | null>(null);
   const [availableWallets, setAvailableWallets] = useState<BrowserWallet[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Restore session from sessionStorage on mount (survives client-side navigation)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const session = loadSession();
+    if (!session) return;
+    // Re-attach the provider silently (no prompt)
+    const globalWindow = window as Window & typeof globalThis & { ethereum?: BrowserWallet | { providers?: BrowserWallet[] } };
+    const injected = globalWindow.ethereum as BrowserWallet | undefined;
+    if (!injected?.request) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const candidates = Array.isArray((injected as any).providers)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? ((injected as any).providers as BrowserWallet[])
+      : [injected];
+    const provider = candidates[0];
+    if (!provider?.request) return;
+    // Check MetaMask still has access (no prompt, just check cached accounts)
+    provider.request({ method: 'eth_accounts' }).then((accounts) => {
+      const list = accounts as string[];
+      const matched = list.find(a => a.toLowerCase() === session.address.toLowerCase());
+      if (!matched) { clearSession(); return; }
+      createViemAdapterFromProvider({ provider: provider as Parameters<typeof createViemAdapterFromProvider>[0]['provider'] })
+        .then(createdAdapter => {
+          setAdapter(createdAdapter);
+          setWalletAddress(matched);
+          setWalletName(toWalletName(provider));
+          setWalletProvider(provider);
+          setChainId(session.chainId);
+        }).catch(() => clearSession());
+    }).catch(() => clearSession());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -219,11 +268,13 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdAdapter = await createViemAdapterFromProvider({ provider: provider as any });
       const networkId = await provider.request({ method: 'eth_chainId' }) as string | number | undefined;
+      const resolvedChainId = networkId ? String(networkId) : null;
       setAdapter(createdAdapter);
       setWalletAddress(account);
       setWalletName(toWalletName(provider));
       setWalletProvider(provider);
-      setChainId(networkId ? String(networkId) : null);
+      setChainId(resolvedChainId);
+      saveSession(account, resolvedChainId);
     } catch (error) {
       console.error('Wallet connection failed', error);
       setAdapter(null);
@@ -234,25 +285,47 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Listen for chain changes from MetaMask
+  // Listen for chain + account changes from MetaMask
   useEffect(() => {
     if (!walletProvider) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const provider = walletProvider as any;
     const handleChainChanged = (newChainId: string) => {
-      setChainId(String(newChainId));
+      const id = String(newChainId);
+      setChainId(id);
+      // Update session with new chain
+      setWalletAddress(prev => { if (prev) saveSession(prev, id); return prev; });
+    };
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (!accounts || accounts.length === 0) {
+        // MetaMask disconnected
+        clearSession();
+        setAdapter(null);
+        setWalletAddress(null);
+        setWalletName(null);
+        setChainId(null);
+        setWalletProvider(null);
+      } else {
+        // Account switched — update silently
+        const newAccount = accounts[0];
+        setWalletAddress(newAccount);
+        setChainId(prev => { saveSession(newAccount, prev); return prev; });
+      }
     };
     if (typeof provider.on === 'function') {
       provider.on('chainChanged', handleChainChanged);
+      provider.on('accountsChanged', handleAccountsChanged);
     }
     return () => {
       if (typeof provider.removeListener === 'function') {
         provider.removeListener('chainChanged', handleChainChanged);
+        provider.removeListener('accountsChanged', handleAccountsChanged);
       }
     };
   }, [walletProvider]);
 
   const disconnectWallet = () => {
+    clearSession();
     setAdapter(null);
     setWalletAddress(null);
     setWalletName(null);
