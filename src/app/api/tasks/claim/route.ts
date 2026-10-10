@@ -35,14 +35,23 @@ async function rpc<T>(method: string, params: unknown[]): Promise<T> {
 
 async function checkSwapped(wallet: string): Promise<boolean> {
   const latest = BigInt(await rpc<string>('eth_blockNumber', []));
-  const from = '0x' + (latest - BigInt(5000)).toString(16);
+  const from = '0x' + (latest - BigInt(10000)).toString(16);
   const to   = '0x' + latest.toString(16);
-  const logs = await rpc<unknown[]>('eth_getLogs', [{
-    address: SWAP_ROUTER,
-    topics: [SWAP_TOPIC, padAddress(wallet)],
-    fromBlock: from, toBlock: to,
-  }]);
-  return Array.isArray(logs) && logs.length > 0;
+  // Uniswap V3 Swap event: Swap(address indexed sender, address indexed recipient, ...)
+  // wallet is the RECIPIENT (topic[2]), not sender (topic[1])
+  // Also check as sender (topic[1]) to cover edge cases where wallet routes directly
+  const [asRecipient, asSender] = await Promise.all([
+    rpc<unknown[]>('eth_getLogs', [{
+      topics: [SWAP_TOPIC, null, padAddress(wallet)],
+      fromBlock: from, toBlock: to,
+    }]),
+    rpc<unknown[]>('eth_getLogs', [{
+      topics: [SWAP_TOPIC, padAddress(wallet)],
+      fromBlock: from, toBlock: to,
+    }]),
+  ]);
+  return (Array.isArray(asRecipient) && asRecipient.length > 0) ||
+         (Array.isArray(asSender) && asSender.length > 0);
 }
 
 async function checkSent(wallet: string): Promise<boolean> {

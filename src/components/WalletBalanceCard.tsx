@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useWallet } from '@/context/WalletContext';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, RefreshCw } from 'lucide-react';
 
 // Arc Mainnet token addresses
 const TOKENS = [
@@ -72,6 +72,19 @@ export default function WalletBalanceCard({ className = '' }: { className?: stri
     TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, logo: t.logo, loading: true }))
   );
   const [fetched, setFetched] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (addr: string) => {
+    setRows(TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, logo: t.logo, loading: true })));
+    const results = await Promise.all(
+      TOKENS.map(async (t) => {
+        const balance = await fetchTokenBalance(t.address, addr, t.decimals);
+        return { symbol: t.symbol, name: t.name, balance, usdValue: balance * t.usdRate, logo: t.logo, loading: false };
+      })
+    );
+    setRows(results);
+    setFetched(true);
+  }, []);
 
   useEffect(() => {
     if (!isConnected || !walletAddress) {
@@ -79,30 +92,15 @@ export default function WalletBalanceCard({ className = '' }: { className?: stri
       setFetched(false);
       return;
     }
-    let cancelled = false;
-    async function load() {
-      setRows(TOKENS.map(t => ({ symbol: t.symbol, name: t.name, balance: 0, usdValue: 0, logo: t.logo, loading: true })));
-      const results = await Promise.all(
-        TOKENS.map(async (t) => {
-          const balance = await fetchTokenBalance(t.address, walletAddress!, t.decimals);
-          return {
-            symbol: t.symbol,
-            name: t.name,
-            balance,
-            usdValue: balance * t.usdRate,
-            logo: t.logo,
-            loading: false,
-          };
-        })
-      );
-      if (!cancelled) {
-        setRows(results);
-        setFetched(true);
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-  }, [walletAddress, isConnected]);
+    void load(walletAddress);
+  }, [walletAddress, isConnected, load]);
+
+  const handleRefresh = async () => {
+    if (!walletAddress || refreshing) return;
+    setRefreshing(true);
+    await load(walletAddress);
+    setRefreshing(false);
+  };
 
   const totalUsd = rows.reduce((s, r) => s + r.usdValue, 0);
   const hasAny = rows.some(r => r.balance > 0);
@@ -132,8 +130,20 @@ export default function WalletBalanceCard({ className = '' }: { className?: stri
             )}
           </div>
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
-          <TrendingUp className="h-4 w-4 text-white" />
+        <div className="flex items-center gap-2">
+          {isConnected && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 transition-colors disabled:opacity-50"
+              title="Refresh balances"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 text-white ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
+            <TrendingUp className="h-4 w-4 text-white" />
+          </div>
         </div>
       </div>
 

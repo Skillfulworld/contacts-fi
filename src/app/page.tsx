@@ -3,6 +3,7 @@ import { motion, type Variants } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Check, ArrowLeftRight, Repeat2, Shield, Zap } from "lucide-react";
+import { useWallet } from "@/context/WalletContext";
 
 const fade = (delay = 0): Variants => ({
   hidden: { opacity: 0, y: 24 },
@@ -42,6 +43,7 @@ const Geo = {
 };
 
 export default function LandingPage() {
+  const { connectWallet, isConnected, walletAddress } = useWallet();
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-[#1C1C1E] relative overflow-hidden">
 
@@ -94,12 +96,21 @@ export default function LandingPage() {
             unoptimized
           />
         </div>
-        <Link
-          href="/contacts"
-          className="rounded-full bg-[#6D5DF6] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5a4de0] transition-colors flex items-center gap-1.5"
-        >
-          Connect Wallet <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
+        {isConnected ? (
+          <Link
+            href="/contacts"
+            className="rounded-full bg-[#1C1C1E] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#374151] transition-colors flex items-center gap-1.5"
+          >
+            {walletAddress ? `${walletAddress.slice(0,6)}…${walletAddress.slice(-4)}` : 'Open App'} <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : (
+          <button
+            onClick={() => connectWallet()}
+            className="rounded-full bg-[#6D5DF6] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5a4de0] transition-colors flex items-center gap-1.5"
+          >
+            Connect Wallet <ArrowUpRight className="h-3.5 w-3.5" />
+          </button>
+        )}
       </header>
 
       {/* ── Hero ── */}

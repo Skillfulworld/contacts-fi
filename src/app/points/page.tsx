@@ -24,15 +24,51 @@ export default function PointsPage() {
 
   const [checkedIn, setCheckedIn] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // today key: YYYY-MM-DD — resets state at midnight
+  const todayKey = new Date().toISOString().slice(0, 10);
+
+  // Visited tasks — per wallet + day
+  const visitedStorageKey = walletAddress
+    ? `settlex_visited_${walletAddress.toLowerCase()}_${todayKey}`
+    : `settlex_visited_anon_${todayKey}`;
+
   const [visitedTasks, setVisitedTasks] = useState<Record<string, boolean>>(() => {
     if (typeof window === 'undefined') return {};
-    try { return JSON.parse(localStorage.getItem('settlex_visited_tasks') || '{}'); } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(visitedStorageKey) || '{}'); } catch { return {}; }
   });
+
+  // Claimed tasks — per wallet + day (survives refresh)
+  const claimedStorageKey = walletAddress
+    ? `settlex_claimed_${walletAddress.toLowerCase()}_${todayKey}`
+    : `settlex_claimed_anon_${todayKey}`;
+
+  const [claimedTasks, setClaimedTasks] = useState<Record<string, 'success' | 'pending_review'>>(() => {
+    if (typeof window === 'undefined') return {};
+    try { return JSON.parse(localStorage.getItem(claimedStorageKey) || '{}'); } catch { return {}; }
+  });
+
+  // Reload from correct key when wallet changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      setVisitedTasks(JSON.parse(localStorage.getItem(visitedStorageKey) || '{}'));
+      setClaimedTasks(JSON.parse(localStorage.getItem(claimedStorageKey) || '{}'));
+    } catch { /* silent */ }
+  }, [visitedStorageKey, claimedStorageKey]);
 
   const markVisited = (taskId: string) => {
     setVisitedTasks(prev => {
       const next = { ...prev, [taskId]: true };
-      localStorage.setItem('settlex_visited_tasks', JSON.stringify(next));
+      localStorage.setItem(visitedStorageKey, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const markClaimed = (taskId: string, state: 'success' | 'pending_review') => {
+    setClaimedTasks(prev => {
+      const next = { ...prev, [taskId]: state };
+      localStorage.setItem(claimedStorageKey, JSON.stringify(next));
       return next;
     });
   };
@@ -72,6 +108,16 @@ export default function PointsPage() {
   const grandPrizePct = Math.round((grandPrizeProgress / GRAND_PRIZE_STREAK) * 100);
 
   // ─── Task card definitions ──────────────────────────────────────────────────
+  // Merge live taskStatus with persisted claimedTasks — persisted wins after refresh
+  const resolveStatus = (id: string) => {
+    const live = taskStatus[id];
+    const persisted = claimedTasks[id];
+    if (live === 'loading') return 'loading';
+    if (persisted === 'success') return 'success';
+    if (persisted === 'pending_review') return 'pending_review';
+    return live ?? 'idle';
+  };
+
   const TASKS = [
     {
       id: 'TASK_TWITTER',
@@ -81,10 +127,11 @@ export default function PointsPage() {
       pts: 15,
       visitUrl: 'https://x.com/Settle_xchange/status/2108646781496271089',
       visitLabel: 'View Tweet',
-      status: taskStatus['TASK_TWITTER'] ?? 'idle',
+      status: resolveStatus('TASK_TWITTER'),
       error: taskError['TASK_TWITTER'],
-      onClaim: doClaimTwitterTask,
+      onClaim: async () => { await doClaimTwitterTask(); markClaimed('TASK_TWITTER', 'pending_review'); },
       successMsg: 'Submitted for review — points awarded within 24h',
+      pendingMsg: 'Pending review — points awarded within 24h',
       dailyMax: '1×/day',
       badge: 'Manual Review',
     },
@@ -96,10 +143,11 @@ export default function PointsPage() {
       pts: 5,
       visitUrl: '/contacts/add',
       visitLabel: 'Add Contact',
-      status: taskStatus['TASK_CONTACT'] ?? 'idle',
+      status: resolveStatus('TASK_CONTACT'),
       error: taskError['TASK_CONTACT'],
-      onClaim: doClaimContactTask,
+      onClaim: async () => { await doClaimContactTask(); markClaimed('TASK_CONTACT', 'success'); },
       successMsg: '+5 pts awarded!',
+      pendingMsg: '',
       dailyMax: '1×/day',
       badge: 'Daily',
     },
@@ -111,10 +159,11 @@ export default function PointsPage() {
       pts: 10,
       visitUrl: '/swap',
       visitLabel: 'Swap Now',
-      status: taskStatus['TASK_SWAP'] ?? 'idle',
+      status: resolveStatus('TASK_SWAP'),
       error: taskError['TASK_SWAP'],
-      onClaim: () => doClaimServerTask('TASK_SWAP'),
+      onClaim: async () => { await doClaimServerTask('TASK_SWAP'); markClaimed('TASK_SWAP', 'success'); },
       successMsg: '+10 pts awarded!',
+      pendingMsg: '',
       dailyMax: '3×/day',
       badge: 'Daily',
     },
@@ -126,10 +175,11 @@ export default function PointsPage() {
       pts: 8,
       visitUrl: '/send',
       visitLabel: 'Send Now',
-      status: taskStatus['TASK_SEND'] ?? 'idle',
+      status: resolveStatus('TASK_SEND'),
       error: taskError['TASK_SEND'],
-      onClaim: () => doClaimServerTask('TASK_SEND'),
+      onClaim: async () => { await doClaimServerTask('TASK_SEND'); markClaimed('TASK_SEND', 'success'); },
       successMsg: '+8 pts awarded!',
+      pendingMsg: '',
       dailyMax: '2×/day',
       badge: 'Daily',
     },
@@ -140,8 +190,10 @@ export default function PointsPage() {
     const Icon = task.icon;
     const isBusy = task.status === 'loading';
     const isDone = task.status === 'success';
+    const isPending = task.status === 'pending_review';
+    const isLocked = isDone || isPending;
     const hasVisited = visitedTasks[task.id] ?? false;
-    const canClaim = hasVisited && isConnected && !isBusy && !isDone;
+    const canClaim = hasVisited && isConnected && !isBusy && !isLocked;
     const isExternal = task.visitUrl.startsWith('http');
 
     const visitBtn = isExternal ? (
@@ -196,6 +248,11 @@ export default function PointsPage() {
                 <CheckCircle2 className="h-3.5 w-3.5" />{task.successMsg}
               </p>
             )}
+            {isPending && (
+              <p className="text-xs text-[#F59E0B] font-semibold mt-1 flex items-center gap-1">
+                <Loader2 className="h-3.5 w-3.5" />{task.pendingMsg}
+              </p>
+            )}
             {task.status === 'error' && task.error && (
               <p className="text-xs text-red-500 mt-1 leading-tight">{task.error}</p>
             )}
@@ -210,6 +267,8 @@ export default function PointsPage() {
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
               isDone
                 ? 'bg-[#DCFCE7] text-[#16A34A] cursor-default'
+                : isPending
+                ? 'bg-[#FEF3C7] text-[#92400E] cursor-default'
                 : isBusy
                 ? 'bg-[#EFF6FF] text-[#3B82F6] cursor-wait'
                 : !isConnected
@@ -222,6 +281,8 @@ export default function PointsPage() {
             {isBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {isDone
               ? 'Claimed!'
+              : isPending
+              ? 'Pending Review'
               : isBusy
               ? 'Verifying…'
               : !isConnected
