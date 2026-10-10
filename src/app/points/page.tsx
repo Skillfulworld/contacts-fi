@@ -145,7 +145,10 @@ export default function PointsPage() {
       visitLabel: 'Add Contact',
       status: resolveStatus('TASK_CONTACT'),
       error: taskError['TASK_CONTACT'],
-      onClaim: async () => { await doClaimContactTask(); markClaimed('TASK_CONTACT', 'success'); },
+      onClaim: async () => {
+        const ok = await doClaimContactTask();
+        if (ok) markClaimed('TASK_CONTACT', 'success');
+      },
       successMsg: '+5 pts awarded!',
       pendingMsg: '',
       dailyMax: '1×/day',
@@ -161,7 +164,7 @@ export default function PointsPage() {
       visitLabel: 'Swap Now',
       status: resolveStatus('TASK_SWAP'),
       error: taskError['TASK_SWAP'],
-      onClaim: async () => { await doClaimServerTask('TASK_SWAP'); markClaimed('TASK_SWAP', 'success'); },
+      onClaim: async () => { const ok = await doClaimServerTask('TASK_SWAP'); if (ok) markClaimed('TASK_SWAP', 'success'); },
       successMsg: '+10 pts awarded!',
       pendingMsg: '',
       dailyMax: '3×/day',
@@ -177,7 +180,7 @@ export default function PointsPage() {
       visitLabel: 'Send Now',
       status: resolveStatus('TASK_SEND'),
       error: taskError['TASK_SEND'],
-      onClaim: async () => { await doClaimServerTask('TASK_SEND'); markClaimed('TASK_SEND', 'success'); },
+      onClaim: async () => { const ok = await doClaimServerTask('TASK_SEND'); if (ok) markClaimed('TASK_SEND', 'success'); },
       successMsg: '+8 pts awarded!',
       pendingMsg: '',
       dailyMax: '2×/day',

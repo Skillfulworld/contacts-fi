@@ -355,8 +355,8 @@ export function usePoints() {
   // ─── Task claiming ─────────────────────────────────────────────────────────
 
   /** Claim points for Add a Contact (trust-based, once/day) */
-  const doClaimContactTask = useCallback(async () => {
-    if (!walletAddress || !walletProvider) return;
+  const doClaimContactTask = useCallback(async (): Promise<boolean> => {
+    if (!walletAddress || !walletProvider) return false;
     const key = 'TASK_CONTACT';
     setTaskStatus(s => ({ ...s, [key]: 'loading' }));
     setTaskError(s => ({ ...s, [key]: '' }));
@@ -365,7 +365,6 @@ export function usePoints() {
         const r = await switchToArcMainnet();
         if (!r.ok) throw new Error('Switch to Arc Mainnet first');
       }
-      // claimContactTask() selector
       const data = encodeSelector('claimContactTask()');
       const txHash = await walletProvider.request({
         method: 'eth_sendTransaction',
@@ -375,6 +374,7 @@ export function usePoints() {
       setTaskStatus(s => ({ ...s, [key]: 'success' }));
       await refresh();
       setTimeout(() => setTaskStatus(s => ({ ...s, [key]: 'idle' })), 4000);
+      return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
       if (msg.includes('rejected') || msg.includes('denied')) {
@@ -383,12 +383,13 @@ export function usePoints() {
         setTaskStatus(s => ({ ...s, [key]: 'error' }));
         setTaskError(s => ({ ...s, [key]: msg }));
       }
+      return false;
     }
   }, [walletAddress, walletProvider, isOnArcMainnet, switchToArcMainnet, refresh]);
 
   /** Claim swap/send task points via server-signed voucher */
-  const doClaimServerTask = useCallback(async (taskId: 'TASK_SWAP' | 'TASK_SEND') => {
-    if (!walletAddress || !walletProvider) return;
+  const doClaimServerTask = useCallback(async (taskId: 'TASK_SWAP' | 'TASK_SEND'): Promise<boolean> => {
+    if (!walletAddress || !walletProvider) return false;
     setTaskStatus(s => ({ ...s, [taskId]: 'loading' }));
     setTaskError(s => ({ ...s, [taskId]: '' }));
     try {
@@ -396,9 +397,7 @@ export function usePoints() {
         const r = await switchToArcMainnet();
         if (!r.ok) throw new Error('Switch to Arc Mainnet first');
       }
-      // Get current nonce from contract
       const nonce = await readTaskNonce(walletAddress);
-      // Ask server to verify + sign
       const res = await fetch('/api/tasks/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -408,18 +407,15 @@ export function usePoints() {
       if (!res.ok || !json.voucher) throw new Error(json.error ?? 'Verification failed');
 
       const { taskId: taskIdHash, day, nonce: voucherNonce, sig } = json.voucher;
-
-      // Build claimTask(bytes32,uint256,uint256,bytes) calldata manually
-      // selector + bytes32 taskId + uint256 day + uint256 nonce + bytes offset + bytes length + bytes data (padded)
-      const selector = '0x3b5f9775'; // keccak4('claimTask(bytes32,uint256,uint256,bytes)')
+      const selector = '0x3b5f9775';
       const sigHex = sig.replace('0x', '');
-      const sigLen = sigHex.length / 2; // 65 bytes
+      const sigLen = sigHex.length / 2;
       const sigPadded = sigHex.padEnd(Math.ceil(sigLen / 32) * 64, '0');
       const data = selector
         + taskIdHash.replace('0x', '').padStart(64, '0')
         + BigInt(day).toString(16).padStart(64, '0')
         + BigInt(voucherNonce).toString(16).padStart(64, '0')
-        + '0000000000000000000000000000000000000000000000000000000000000080' // bytes offset = 128
+        + '0000000000000000000000000000000000000000000000000000000000000080'
         + sigLen.toString(16).padStart(64, '0')
         + sigPadded;
 
@@ -431,6 +427,7 @@ export function usePoints() {
       setTaskStatus(s => ({ ...s, [taskId]: 'success' }));
       await refresh();
       setTimeout(() => setTaskStatus(s => ({ ...s, [taskId]: 'idle' })), 4000);
+      return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
       if (msg.includes('rejected') || msg.includes('denied')) {
@@ -439,6 +436,7 @@ export function usePoints() {
         setTaskStatus(s => ({ ...s, [taskId]: 'error' }));
         setTaskError(s => ({ ...s, [taskId]: msg }));
       }
+      return false;
     }
   }, [walletAddress, walletProvider, isOnArcMainnet, switchToArcMainnet, refresh]);
 
